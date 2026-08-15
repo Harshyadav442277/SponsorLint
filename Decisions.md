@@ -269,6 +269,19 @@ Deleted from the working tree; **retained in git history** (`git show e759a5b:do
 | `SponsorLint_Project_Bible.md` | First SponsorLint plan | **D9** — uses a real brand's product name and URL |
 | `SPONSORLINT_EXECUTION_BIBLE.superseded.md` | Second plan, folding in the bakeoff | **D7, D19b** — emits FTC statutory language |
 | `SPONSORLINT_FINAL_EXECUTION_BIBLE.md` | Third plan | D19a — validator-count drift |
-| `SPONSORLINT_BIBLE.md` | Merged bible — direct source of these seven documents | D19 — pre-freeze |
 
-**Why they were removed rather than archived in-repo:** four of them are superseded authorities, and two contain instructions these documents explicitly reverse. An agent that greps the repo, or a session pointed at a folder, reintroduces a documented bug. Git already preserves everything, so an archive folder alongside version control is redundant *and* a loaded gun.
+**Why they were removed rather than archived in-repo:** each is a superseded authority, and two contain instructions these documents explicitly reverse. An agent that greps the repo, or a session pointed at a folder, reintroduces a documented bug. Git already preserves everything, so an archive folder alongside version control is redundant *and* a loaded gun.
+
+## D20 · Keep the bible, as a reference narrative
+
+**Kept:** `docs/SPONSORLINT_BIBLE.md` — the merged bible, direct source of the seven documents.
+
+**Why keep it** when D19's whole argument was that superseded authorities are dangerous: a single readable file has real uses the seven do not cover — onboarding a person, pasting into a tool that wants one document, drafting the submission blurb. The seven are optimized for an agent working one phase at a time; the bible is optimized for a human reading end to end.
+
+**Why it is safe, unlike the four that were deleted:**
+
+1. Its header was inverted — it now declares itself a reference narrative and states that root documents win any disagreement.
+2. It carries all four D19 corrections. It does not contradict anything.
+3. It is one file with an unambiguous status line, not a folder of four rival plans.
+
+**The standing obligation:** anyone editing a root document either updates the bible to match or flips its header to `STALE`. **A reference narrative that has silently drifted is worse than none** — it is precisely the failure mode D19 was about, wearing a friendlier label.

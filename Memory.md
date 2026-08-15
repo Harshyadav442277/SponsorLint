@@ -37,7 +37,7 @@ Submittable:      NO  (becomes YES at Phase 4 gate)
 
 **What works:** nothing yet — no code written.
 
-**What exists:** the seven planning documents at repo root — **the only authority**. Superseded plans deleted; git history retains them.
+**What exists:** the seven planning documents at repo root — **the only authority**. Plus `docs/SPONSORLINT_BIBLE.md`, a reference narrative that is *not* an authority (`Decisions.md` D20) — if you edit a root doc, update it or mark it `STALE`. Other superseded plans deleted; git history retains them.
 
 **Next action:** Start `Phases.md` `T+0:00 – 0:15` — create the repo skeleton and both requirements files.
 

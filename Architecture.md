@@ -384,7 +384,7 @@ all blocking rules pass                 → SPONSOR READY
 
 If a percentage is shown, it is `passed weighted rules / total weighted rules × 100` and nothing else.
 
-**Do not engineer weights to produce a nicer-looking number.** If the demo arc naturally lands on 57% → 86%, fine; if it lands somewhere else, report what it lands on. Better still, prefer the raw fraction in demo material — it is more trustworthy and cannot be accused of being tuned:
+**Do not engineer weights to produce a nicer-looking number**, and do not carry a target percentage from any earlier draft. Report what the formula produces. Better still, prefer the raw fraction in demo material — it is more trustworthy and cannot be accused of being tuned:
 
 ```
 V1   4/7 requirements passed      DO NOT SEND

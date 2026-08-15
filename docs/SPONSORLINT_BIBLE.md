@@ -131,7 +131,17 @@ REVIEW           no blocking failure, but warnings or manual-review items exist
 SPONSOR READY    all blocking requirements passed
 ```
 
-A percentage score is optional and secondary. The binary state is what matters.
+A percentage score is optional and secondary. **The binary state is what matters.**
+
+If a score is shown it is `passed weighted rules / total weighted rules × 100` and nothing else. **Do not engineer weights to produce a nicer-looking number.** Prefer the raw fraction in demo material — it is more trustworthy and cannot be accused of tuning:
+
+```
+V1   4/7 requirements passed      DO NOT SEND
+V2   6/7 requirements passed      DO NOT SEND
+V3   7/7 requirements passed      SPONSOR READY
+```
+
+Whatever counts the run actually produces, use those.
 
 ---
 
@@ -606,11 +616,25 @@ Manual Review:      3
 
 **Do not fabricate perfection.** Publish whatever the real number is.
 
+## Terminology — define once, never deviate
+
+"False positive" reverses meaning depending on whether the reader treats a violation or a passing check as the positive event, so a judge can read our strongest engineering stance backwards. **Never use the bare term.**
+
+```
+Positive     = SponsorLint reports a violation (returns FAIL).
+
+False FAIL   = reported FAIL, requirement was actually satisfied.
+               Cost: the creator re-edits something that was fine.
+
+False PASS   = reported PASS, requirement was actually violated.
+               Cost: a broken sponsor read ships to the brand.
+```
+
 ## Tuning policy — state this out loud
 
-> A false FAIL wastes the creator's afternoon. A false PASS ships a broken sponsor read to the brand. The two errors are not symmetric.
+> A False FAIL wastes the creator's afternoon. A False PASS ships a broken sponsor read to the brand. The two errors are not symmetric.
 >
-> **Avoid false FAILs. Route ambiguity to MANUAL REVIEW. Then maximize violation catch rate.**
+> **Avoid False FAILs. Route ambiguity to MANUAL REVIEW. Then maximize violation catch rate.**
 
 That is a designed engineering tradeoff, backed by a measured number. It converts *"isn't this just string matching?"* into *"it's string matching that I measured, which is more than the rest of the field can say."*
 

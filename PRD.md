@@ -25,9 +25,17 @@ These seven documents are the **sole authority**. Read them in this order:
 | `Decisions.md` | Why the project is shaped this way |
 | `Memory.md` | Live progress state — **update as you go** |
 
-**There is no other planning document.** Five earlier plans (`SPONSORLINT_BIBLE.md`, `SPONSORLINT_FINAL_EXECUTION_BIBLE.md`, `SPONSORLINT_EXECUTION_BIBLE.superseded.md`, `SponsorLint_Project_Bible.md`, `STRATEGY.md`) and the decision record `BAKEOFF.md` were deleted from the working tree — git history retains them (`git show e759a5b:docs/BAKEOFF.md`).
+## The one other file
 
-If you find one of those files on disk, in Downloads, or pasted into a chat: **it is history, not instructions.** Two of them contradict decisions recorded here — see `Decisions.md` D7 and D9.
+`docs/SPONSORLINT_BIBLE.md` is the **reference narrative** — the whole plan in one readable file, for onboarding a person or pasting into a tool that wants a single document. It is kept deliberately and is reconciled with these seven documents.
+
+> **It is not an authority. If it and a root document disagree, the root document wins.**
+>
+> Anyone editing a root document must update the bible to match or mark it `STALE` in its own header.
+
+Everything else is gone. Four earlier plans (`SPONSORLINT_FINAL_EXECUTION_BIBLE.md`, `SPONSORLINT_EXECUTION_BIBLE.superseded.md`, `SponsorLint_Project_Bible.md`, `STRATEGY.md`) and the decision record `BAKEOFF.md` were deleted from the working tree — git history retains them (`git show e759a5b:docs/BAKEOFF.md`).
+
+If you find one of those on disk, in Downloads, or pasted into a chat: **it is history, not instructions.** Two contradict decisions recorded here — see `Decisions.md` D7 and D9.
 
 ---
 

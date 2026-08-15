@@ -25,7 +25,9 @@ These seven documents are the **sole authority**. Read them in this order:
 | `Decisions.md` | Why the project is shaped this way |
 | `Memory.md` | Live progress state — **update as you go** |
 
-Superseded and archived in `docs/`: `SPONSORLINT_BIBLE.md`, `SPONSORLINT_FINAL_EXECUTION_BIBLE.md`, `SPONSORLINT_EXECUTION_BIBLE.superseded.md`, `SponsorLint_Project_Bible.md`, `STRATEGY.md`, `BAKEOFF.md`. They are history, not instructions.
+**There is no other planning document.** Five earlier plans (`SPONSORLINT_BIBLE.md`, `SPONSORLINT_FINAL_EXECUTION_BIBLE.md`, `SPONSORLINT_EXECUTION_BIBLE.superseded.md`, `SponsorLint_Project_Bible.md`, `STRATEGY.md`) and the decision record `BAKEOFF.md` were deleted from the working tree — git history retains them (`git show e759a5b:docs/BAKEOFF.md`).
+
+If you find one of those files on disk, in Downloads, or pasted into a chat: **it is history, not instructions.** Two of them contradict decisions recorded here — see `Decisions.md` D7 and D9.
 
 ---
 
@@ -133,6 +135,16 @@ The recorded segment is transcribed with timestamps. Segment-level timestamps ar
 
 ### F5 · Manual review
 Requirements that cannot be verified from audio or duration are surfaced as `MANUAL REVIEW` — never dropped, never guessed. Excluded from the score, always visible, never blocking.
+
+### The check surface — count it this way
+
+```
+6 executable rule types
++ 1 disclosure-placement advisory   (derived, not a rule type)
++ 1 MANUAL_REVIEW outcome           (what happens when no validator exists)
+```
+
+**There are six validators.** `MANUAL_REVIEW` is not a validator — it is the outcome when no supported validator applies. Disclosure placement is not a seventh rule type — it is a property of the `MUST_DISCLOSE` result. Never write "seven rule types" or "eight validators."
 
 ### F6 · Timestamped evidence
 Every finding answers five questions: **what was required · what was detected · where · what evidence · where did the requirement come from.**

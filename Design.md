@@ -395,6 +395,7 @@ Add at least one rule, or re-compile the brief.
 The single most-viewed visual artifact in the project.
 
 - Terminal, dark theme, ~6 seconds, no narration, no cursor wiggling
-- Shows: `sponsorlint demo` → findings scroll → `DO NOT SEND` → the corrected run → `SPONSOR READY`
+- Shows: `sponsorlint demo` → findings scroll → `4/7 · DO NOT SEND` → the corrected run → `7/7 · SPONSOR READY`
+- Use the **raw fraction**, not a percentage. Report the counts the run actually produces
 - Font ≥ 16px in the recording — it will be viewed at half size on GitHub
 - Trim every idle frame. The whole point is the verdict flipping

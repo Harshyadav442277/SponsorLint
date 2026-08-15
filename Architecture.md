@@ -345,12 +345,31 @@ Normalize spaces, verbal punctuation, optional `www`, scheme, casing, trailing s
 | `MUST_SAY` | normalized exact → fuzzy ≥90 → FAIL. On failure, report the closest partial match so the user sees *why* |
 | `MUST_NOT_SAY` | same, inverted. **Substring trap:** bare `anonymous` must not fire a rule for `"completely anonymous"` |
 | `EXACT_VALUE` | full numeral normalization. Deterministic only. Never an LLM. Never fuzzy |
-| `MUST_DISCLOSE` | phrase set + fuzzy: `sponsored by`, `this video is sponsored by`, `paid partnership`, `thanks to X for sponsoring`, `today's sponsor is`. Always return the timestamp |
-| Disclosure **placement** | If the brief specifies placement, enforce as a normal rule. If it does not and disclosure is late, emit an **advisory only**. Never quote regulatory language or call it non-compliance |
+| `MUST_DISCLOSE` | phrase set + fuzzy: `sponsored by`, `this video is sponsored by`, `paid partnership`, `thanks to X for sponsoring`, `today's sponsor is`. **Always return the timestamp** |
 | `DURATION` | `ffprobe`. One call. No LLM |
 | `URL_OR_CTA` | canonicalize per §5.1 |
 
-## 5.4 Readiness resolution
+## 5.4 Disclosure placement
+
+Not a rule type. A derived property of the `MUST_DISCLOSE` result.
+
+```
+if the brief specifies placement:
+    enforce it as a normal rule          # demo brief: "near the beginning"
+
+else:
+    show the disclosure timestamp only
+
+    optional advisory, never a verdict:
+    ⚠ ADVISORY — Disclosure occurs at 00:47.
+                 Review placement before sending.
+```
+
+**No invented threshold.** Do not flag on "after 25% of the segment" or "after 30 seconds" or any other number we made up. Any rule not derived from the sponsor brief is a rule we are inventing on the creator's behalf, and it edges toward the legal-compliance claim `Rules.md` §8 bans.
+
+**Never emit regulatory language.** No *"clear and conspicuous,"* no *"FTC,"* no *"legally required."* We check the supplied brief, not the law.
+
+## 5.5 Readiness resolution
 
 ```
 any blocking (error) rule fails         → DO NOT SEND
@@ -360,6 +379,20 @@ all blocking rules pass                 → SPONSOR READY
 ```
 
 `MANUAL REVIEW` items are excluded from the score, listed separately, and **never block** `SPONSOR READY`.
+
+### On the score
+
+If a percentage is shown, it is `passed weighted rules / total weighted rules × 100` and nothing else.
+
+**Do not engineer weights to produce a nicer-looking number.** If the demo arc naturally lands on 57% → 86%, fine; if it lands somewhere else, report what it lands on. Better still, prefer the raw fraction in demo material — it is more trustworthy and cannot be accused of being tuned:
+
+```
+V1   4/7 requirements passed      DO NOT SEND
+V2   6/7 requirements passed      DO NOT SEND
+V3   7/7 requirements passed      SPONSOR READY
+```
+
+The binary state is what matters. The score is decoration.
 
 ---
 
@@ -422,6 +455,24 @@ The number is worthless without them.
 | `URL_OR_CTA aegisvpn.com/alex` | "aegis vpn dot com slash alex" | PASS |
 | `EXACT_VALUE HARSH20` | "use code H-A-R-S-H two zero" | PASS |
 
+## Terminology — define this once, use it everywhere
+
+Judges and readers interpret "false positive" in opposite directions depending on whether they think the positive event is *a violation* or *a passing check*. Remove the ambiguity by never using the bare term.
+
+```
+Positive       = SponsorLint reports a violation (returns FAIL).
+
+False FAIL     = SponsorLint reports FAIL when the requirement
+                 was actually satisfied.
+                 Cost: the creator re-edits something that was fine.
+
+False PASS     = SponsorLint reports PASS when the requirement
+                 was actually violated.
+                 Cost: a broken sponsor read ships to the brand.
+```
+
+Use `False FAIL` and `False PASS` in output, in the README, and in conversation. **Do not write "false positive" anywhere.**
+
 ## Output
 
 ```text
@@ -432,8 +483,8 @@ Correct:           27
 Incorrect:          1
 Accuracy:        96.4%
 
-False FAILs:        0
-False PASSes:       1
+False FAILs:        0     (reported FAIL, requirement was satisfied)
+False PASSes:       1     (reported PASS, requirement was violated)
 Manual Review:      3
 ```
 

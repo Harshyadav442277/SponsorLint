@@ -8,7 +8,7 @@ Format: **the decision · the alternative · why · what would change our minds.
 
 ## D1 · Build SponsorLint, not Cutcheck
 
-**Decided:** Aug 15, 2026, after an adversarial bakeoff (two advocates + a judge). Full record in `docs/BAKEOFF.md`.
+**Decided:** Aug 15, 2026, after an adversarial bakeoff (two advocates + a judge). Full record in git history: `git show e759a5b:docs/BAKEOFF.md`.
 
 **Alternative:** Cutcheck — mine a creator's own retention curves for editing patterns that coincide with viewer drop-off, then lint the next unpublished cut.
 
@@ -222,6 +222,32 @@ Every one of D5, D10, D11, and D12 exists to serve that target.
 
 ---
 
+## D19 · Four freeze corrections, and the plan is now closed
+
+Applied Aug 15, 2026, from a final review pass. Three of the four were already absent from the seven documents and are now stated **explicitly** rather than merely not violated — absence is not a guardrail, since a future agent reintroduces what nobody forbade.
+
+**19a · Validator taxonomy.** Earlier drafts drifted between "six rule types" and "eight validators." Fixed form (`PRD.md` §4.1):
+
+```
+6 executable rule types
++ 1 disclosure-placement advisory   (a property of the MUST_DISCLOSE result)
++ 1 MANUAL_REVIEW outcome           (what happens when no validator exists)
+```
+
+`MANUAL_REVIEW` is not a validator — it is the absence of one. Counting it as a rule type inflates the surface and muddies the architecture.
+
+**19b · No invented disclosure threshold.** An earlier draft flagged disclosure occurring after 25% of the segment or 30 seconds, with the string *"unlikely to be considered clear and conspicuous."* Both are removed. That threshold was **a rule not derived from the sponsor brief** — we would have been inventing a requirement on the creator's behalf — and the wording was FTC statutory language, contradicting D7 and `Rules.md` §8. Current behavior in `Architecture.md` §5.4: brief specifies placement → enforce; otherwise → show the timestamp, optional advisory, never a verdict.
+
+**19c · "False positive" is banned as a term.** It reverses meaning depending on whether the reader treats a violation or a passing check as the positive event — so a judge can read our strongest engineering stance backwards. Replaced everywhere with `False FAIL` and `False PASS`, defined once in `Architecture.md` §7 with the asymmetric cost attached to each.
+
+**19d · Do not engineer weights to hit a score.** The `57% → 86%` figures in earlier drafts were illustrative and risked becoming a target. Demo material now uses the raw fraction (`4/7 → 6/7 → 7/7`), which is more trustworthy and cannot be accused of tuning. `Rules.md` §1.15 makes it a rule.
+
+**And the plan is frozen.** `Rules.md` §0 now closes it. The product was chosen through adversarial review, the corrections are applied, and further review rounds produce plausible new features at the cost of hours we do not have. The only permitted review prompt from here:
+
+> *"Find contradictions, implementation blockers, or requirements that cannot be completed within the deadline. Do not propose new features."*
+
+---
+
 ## Open questions
 
 | Question | Owner | Resolve by |
@@ -234,13 +260,15 @@ Every one of D5, D10, D11, and D12 exists to serve that target.
 
 ## Superseded documents
 
-Archived in `docs/`. **History, not instructions.**
+Deleted from the working tree; **retained in git history** (`git show e759a5b:docs/<file>`). They are history, not instructions.
 
-| File | What it was |
-|---|---|
-| `STRATEGY.md` | Original Cutcheck pitch and rubric decode |
-| `BAKEOFF.md` | The full adversarial comparison and rulings — the source for D1 |
-| `SponsorLint_Project_Bible.md` | First SponsorLint plan |
-| `SPONSORLINT_EXECUTION_BIBLE.superseded.md` | Second plan, folding in the bakeoff |
-| `SPONSORLINT_FINAL_EXECUTION_BIBLE.md` | Third plan |
-| `SPONSORLINT_BIBLE.md` | Merged bible — direct source of these seven documents |
+| File | What it was | Contradicts |
+|---|---|---|
+| `STRATEGY.md` | Original Cutcheck pitch and rubric decode | D1 — wrong product |
+| `BAKEOFF.md` | The full adversarial comparison and rulings — source for D1 | — |
+| `SponsorLint_Project_Bible.md` | First SponsorLint plan | **D9** — uses a real brand's product name and URL |
+| `SPONSORLINT_EXECUTION_BIBLE.superseded.md` | Second plan, folding in the bakeoff | **D7, D19b** — emits FTC statutory language |
+| `SPONSORLINT_FINAL_EXECUTION_BIBLE.md` | Third plan | D19a — validator-count drift |
+| `SPONSORLINT_BIBLE.md` | Merged bible — direct source of these seven documents | D19 — pre-freeze |
+
+**Why they were removed rather than archived in-repo:** four of them are superseded authorities, and two contain instructions these documents explicitly reverse. An agent that greps the repo, or a session pointed at a folder, reintroduces a documented bug. Git already preserves everything, so an archive folder alongside version control is redundant *and* a loaded gun.

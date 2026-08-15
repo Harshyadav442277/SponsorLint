@@ -37,7 +37,7 @@ Submittable:      NO  (becomes YES at Phase 4 gate)
 
 **What works:** nothing yet — no code written.
 
-**What exists:** the seven planning documents. Archived history in `docs/`.
+**What exists:** the seven planning documents at repo root — **the only authority**. Superseded plans deleted; git history retains them.
 
 **Next action:** Start `Phases.md` `T+0:00 – 0:15` — create the repo skeleton and both requirements files.
 
@@ -116,9 +116,11 @@ Pinned so nobody has to re-derive them.
 
 ### Session 0 — planning · Aug 15, 2026
 
-- Ran an adversarial bakeoff between Cutcheck and SponsorLint. SponsorLint won 7.6 to 6.7. Record in `docs/BAKEOFF.md`, reasoning in `Decisions.md` D1
+- Ran an adversarial bakeoff between Cutcheck and SponsorLint. SponsorLint won 7.6 to 6.7. Reasoning preserved in `Decisions.md` D1
 - Merged three prior SponsorLint plans into a single bible, then split it into these seven documents
-- Seven planning docs are now the sole authority; all prior bibles archived in `docs/`
+- Applied four freeze corrections from a final review — validator taxonomy, no invented disclosure threshold, `False FAIL`/`False PASS` terminology, no engineered scores (`Decisions.md` D19)
+- Deleted the superseded plans; git history retains them. **These seven documents are the only authority**
+- **Plan is frozen** (`Rules.md` §0). No more redesign rounds
 - **No code written**
 
 ---

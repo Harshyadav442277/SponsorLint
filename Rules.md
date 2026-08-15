@@ -8,7 +8,21 @@ Boundaries for any AI agent, teammate, or assistant working on this project.
 
 ---
 
-# 1. The fourteen rules
+# 0. The plan is frozen
+
+`PRD.md`, `Architecture.md`, `Rules.md`, `Phases.md`, and `Design.md` are **settled**. The product was chosen through an adversarial review and the corrections from that review are already applied (`Decisions.md`).
+
+**Do not send these documents to another agent asking it to redesign the product.** Every extra review round produces plausible new features and costs hours you do not have.
+
+The only review prompt permitted from here:
+
+> *"Find contradictions, implementation blockers, or requirements that cannot be completed within the deadline. Do not propose new features."*
+
+A finding that fits that prompt gets fixed in the source document and noted in `Memory.md` under Deviations. Anything else is out of scope.
+
+---
+
+# 1. The sixteen rules
 
 1. **Do not add features because they are easy.**
 2. **Do not add a seventh rule family** before every acceptance test in `PRD.md` §6 passes.
@@ -23,7 +37,9 @@ Boundaries for any AI agent, teammate, or assistant working on this project.
 11. **Do not hardcode verdict output.** Every result is computed.
 12. **Do not claim legal compliance.** You check the supplied brief, not the law.
 13. **Do not add Cutcheck, retention analytics, or any second product.**
-14. **When unsure whether something is in scope, it is out of scope.**
+14. **Do not invent a rule the sponsor brief did not state.** No arbitrary disclosure thresholds, no house style guidance, no best-practice nagging. If it is not in the brief, it is not a requirement.
+15. **Do not engineer scoring weights to produce a nicer number.** Report what the formula produces.
+16. **When unsure whether something is in scope, it is out of scope.**
 
 ---
 
@@ -200,7 +216,18 @@ Before adding anything, answer:
 
 ## Specifically: no regulatory language
 
-Do not emit or write phrases like *"clear and conspicuous,"* *"FTC compliant,"* or *"legally required."* The disclosure-placement check emits an **advisory**, not a legal verdict.
+Do not emit or write phrases like *"clear and conspicuous,"* *"FTC compliant,"* or *"legally required."* The disclosure-placement check emits an **advisory**, not a legal verdict, and only when the brief did not specify placement itself (`Architecture.md` §5.4).
+
+## Specifically: never write "false positive"
+
+The term reverses meaning depending on whether the reader thinks the positive event is a violation or a passing check. Always use the explicit form:
+
+```
+False FAIL   reported FAIL, requirement was actually satisfied
+False PASS   reported PASS, requirement was actually violated
+```
+
+Definitions live in `Architecture.md` §7. Use them in output, in the README, and in conversation.
 
 ---
 

@@ -166,7 +166,17 @@ Upload → Compile → Review/edit spec → Upload video → Run check → Repor
 
 - Re-record only the offending sentences and splice into the base take
 - Transcribe, commit `transcript.v3.json`
-- Capture `DO NOT SEND → SPONSOR READY` as a side-by-side report diff or GIF
+- Capture the arc as a side-by-side report diff or GIF
+
+Show it as a **raw fraction**, not a percentage — it cannot be accused of tuned weights:
+
+```
+V1   4/7 requirements passed      DO NOT SEND
+V2   6/7 requirements passed      DO NOT SEND
+V3   7/7 requirements passed      SPONSOR READY
+```
+
+Whatever the real counts are, use those. Do not adjust rule weights to make the arc look better (`Rules.md` §1.15).
 
 > **GATE 25:00** — the arc runs clean twice in a row.
 

@@ -16,6 +16,7 @@ from .prompt import PROMPT_VERSION, build_prompt
 
 MODEL = "claude-opus-5"
 MAX_TOKENS = 16000
+REQUEST_TIMEOUT_SECONDS = 60
 
 
 class CompileError(RuntimeError):
@@ -44,6 +45,7 @@ def compile_brief(brief_text: str, *, model: str = MODEL, client=None) -> Spec:
                 max_tokens=MAX_TOKENS,
                 messages=[{"role": "user", "content": prompt}],
                 output_format=Spec,
+                timeout=REQUEST_TIMEOUT_SECONDS,
             )
         except Exception as exc:  # noqa: BLE001 - surfaced below, never swallowed
             last_error = exc
@@ -79,13 +81,9 @@ def compile_brief(brief_text: str, *, model: str = MODEL, client=None) -> Spec:
 
 
 def _finalize(spec: Spec, brief_text: str) -> Spec:
-    """Normalize ids and ground every compiler-provided quote in the brief."""
+    """Ground every compiler-provided quote in the brief."""
     normalized_brief = _normalized_whitespace(brief_text)
-    for index, rule in enumerate(spec.rules, start=1):
-        if not rule.id:
-            rule.id = f"r{index}"
-        if not rule.label:
-            rule.label = rule.type.replace("_", " ").title()
+    for rule in spec.rules:
         # Belt and braces: source_quote is mandatory in the model, so an
         # extraction without one has already been rejected by validation.
         if not rule.source_quote.strip():
@@ -126,7 +124,15 @@ def _client():
             "but not requirements-demo.txt:  pip install -r requirements.txt"
         ) from exc
 
-    return anthropic.Anthropic()
+    # The explicit two-attempt loop above is the retry policy. Disable the
+    # SDK's hidden automatic retries so "retry once" remains literally true.
+    return anthropic.Anthropic(max_retries=0)
 
 
-__all__ = ["compile_brief", "CompileError", "MODEL", "PROMPT_VERSION"]
+__all__ = [
+    "compile_brief",
+    "CompileError",
+    "MODEL",
+    "PROMPT_VERSION",
+    "REQUEST_TIMEOUT_SECONDS",
+]

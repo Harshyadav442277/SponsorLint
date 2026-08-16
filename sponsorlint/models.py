@@ -149,6 +149,14 @@ class ManualReviewItem(BaseModel):
 
     source_quote: str
     reason: str = "Not verifiable from audio or duration."
+    confirmed: bool = False
+
+    @field_validator("source_quote")
+    @classmethod
+    def _manual_quote_required(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("source_quote is mandatory for manual-review items")
+        return v.strip()
 
 
 # --------------------------------------------------------------------------
@@ -268,7 +276,8 @@ class Summary(BaseModel):
     passed: int = Field(0, alias="pass")
     warn: int = 0
     fail: int = 0
-    manual_review: int = 0
+    manual_review: int = 0  # unresolved manual items
+    manual_confirmed: int = 0
 
 
 class Score(BaseModel):

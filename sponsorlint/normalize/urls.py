@@ -81,4 +81,21 @@ def spoken_pattern(url: str) -> re.Pattern[str]:
             pieces.append(_literal_chars(part))
 
     body = "".join(pieces)
-    return re.compile(_SCHEME_PREFIX + r"(?:www\s*(?:\.|dot)\s*)?" + body + r"/?")
+    # Do not accept the expected URL as a substring of another host, slug, or
+    # deeper path. A sentence-ending period remains valid; a literal `.evil`
+    # or a spoken `slash billing` continuation does not.
+    left_guard = r"(?<![a-z0-9])"
+    right_guard = (
+        r"(?![a-z0-9])"
+        r"(?!\.[a-z0-9])"
+        r"(?!\s*[/_-]\s*[a-z0-9])"
+        r"(?!\s*(?:dot|slash|forward\s+slash|dash|hyphen|underscore)\s+[a-z0-9])"
+    )
+    return re.compile(
+        left_guard
+        + _SCHEME_PREFIX
+        + r"(?:www\s*(?:\.|dot)\s*)?"
+        + body
+        + r"/?"
+        + right_guard
+    )

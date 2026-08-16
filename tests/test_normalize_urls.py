@@ -35,6 +35,20 @@ def test_wrong_url_does_not_match(spoken):
     assert not spoken_pattern(URL).search(canonicalize(spoken))
 
 
+@pytest.mark.parametrize(
+    "spoken",
+    [
+        "go to notaegisvpn.com/alex today",
+        "go to aegisvpn.com/alexander today",
+        "go to aegisvpn.com/alex2 today",
+        "go to aegisvpn.com/alex.evil.com today",
+        "go to aegisvpn.com/alex slash billing today",
+    ],
+)
+def test_url_does_not_match_inside_a_longer_or_different_url(spoken):
+    assert not spoken_pattern(URL).search(canonicalize(spoken))
+
+
 def test_canonical_url_strips_scheme_www_and_trailing_slash():
     assert canonical_url("https://www.AegisVPN.com/alex/") == URL
     assert canonical_url("aegis vpn dot com slash alex") == URL

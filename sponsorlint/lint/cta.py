@@ -30,7 +30,7 @@ def check(rule: Rule, tx: Transcript) -> Result:
     elif looks_like_code(expected):
         hits = hay.search_all_any_view(code_pattern(expected))
 
-    if not hits:
+    if not hits and not is_identifier:
         hits = hay.contains_all(canonicalize(expected))
 
     # A tracked URL or promo code is an identifier, not a phrase: it is either

@@ -29,8 +29,17 @@ def test_the_arithmetic_folder_would_have_destroyed_the_code():
     assert rewrite_number_words("two zero") == "2"
 
 
-def test_wrong_code_does_not_match():
-    assert not spoken_pattern("HARSH20").search(normalize_text("use code HARSH21"))
+@pytest.mark.parametrize(
+    "spoken",
+    [
+        "use code HARSH21",
+        "use code HARSH2",
+        "use code HARSH200",
+        "use code harsh twenty",
+    ],
+)
+def test_wrong_code_does_not_match(spoken):
+    assert not spoken_pattern("HARSH20").search(normalize_text(spoken))
 
 
 def test_canonical_codes_folds_a_spelled_run():

@@ -149,6 +149,10 @@ def value_pattern(value: str) -> re.Pattern[str]:
     The guards are what stop `73` matching inside `730` or `chapter 173`.
     Numeric comparison is membership only — never fuzzy (Rules.md §1.6).
     """
+    if re.fullmatch(r"\d+(?:\.\d+)?", value):
+        # A unitless contractual number must not pass inside a decimal,
+        # percentage, or currency amount: 73 != 73.0 != 73% != $73.
+        return re.compile(rf"(?<![\d.$]){re.escape(value)}(?![\d.%])")
     return re.compile(rf"(?<![\d.]){re.escape(value)}(?![\d])")
 
 

@@ -50,6 +50,14 @@ def test_boundary_guards_stop_partial_number_matches(text):
     assert not contains("73%", text)
 
 
+@pytest.mark.parametrize(
+    "text",
+    ["73%", "73.0", "73.5", "$73", "73 dollars", "seventy third", "7 3"],
+)
+def test_unitless_value_does_not_match_a_different_numeric_shape(text):
+    assert not contains("73", text)
+
+
 def test_rewriter_is_idempotent_on_digits():
     assert rewrite_number_words("save 73 percent") == "save 73 percent"
     assert canonicalize("save 73%") == canonicalize("save seventy-three percent")

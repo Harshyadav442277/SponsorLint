@@ -102,11 +102,11 @@ def test_compiler_grounding_normalizes_whitespace_only():
     assert models.kwargs[0]["contents"] == build_prompt(
         "Campaign\n\nMention   the product name."
     )
-    assert config.response_schema is None
-    assert config.response_json_schema == Spec.model_json_schema()
-    assert config.response_mime_type == "application/json"
-    assert config.http_options.timeout == REQUEST_TIMEOUT_SECONDS * 1000
-    assert config.http_options.retry_options.attempts == 1
+    assert "response_schema" not in config
+    assert config["response_json_schema"] == Spec.model_json_schema()
+    assert config["response_mime_type"] == "application/json"
+    assert config["http_options"]["timeout"] == REQUEST_TIMEOUT_SECONDS * 1000
+    assert config["http_options"]["retry_options"]["attempts"] == 1
 
 
 def test_prompt_treats_brief_content_as_untrusted_data():

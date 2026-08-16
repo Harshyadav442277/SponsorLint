@@ -100,29 +100,21 @@ def _normalized_whitespace(text: str) -> str:
 
 
 def _generation_config():
-    try:
-        from google.genai import types
-    except ImportError as exc:
-        raise CompileError(
-            "The google-genai package is not installed. It is in requirements.txt "
-            "but not requirements-demo.txt:  pip install -r requirements.txt"
-        ) from exc
-
-    return types.GenerateContentConfig(
-        response_mime_type="application/json",
+    return {
+        "response_mime_type": "application/json",
         # `response_schema=Spec` maps Pydantic's `extra="forbid"` to an
         # OpenAPI field Gemini rejects. The SDK's JSON Schema path preserves
         # that constraint, and `_parsed_spec` still performs authoritative
         # Pydantic validation on the returned structure.
-        response_json_schema=Spec.model_json_schema(),
-        max_output_tokens=MAX_TOKENS,
-        http_options=types.HttpOptions(
-            timeout=REQUEST_TIMEOUT_SECONDS * 1000,
+        "response_json_schema": Spec.model_json_schema(),
+        "max_output_tokens": MAX_TOKENS,
+        "http_options": {
+            "timeout": REQUEST_TIMEOUT_SECONDS * 1000,
             # SponsorLint owns the explicit two-attempt policy. Disable the
             # SDK's default retries so one retry remains literally true.
-            retry_options=types.HttpRetryOptions(attempts=1),
-        ),
-    )
+            "retry_options": {"attempts": 1},
+        },
+    }
 
 
 def _parsed_spec(response) -> Spec:

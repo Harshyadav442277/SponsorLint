@@ -243,12 +243,26 @@ function renderReview() {
     head.appendChild(el("h3", null, item.reason));
     card.appendChild(head);
     card.appendChild(el("div", "evidence", `"${item.source_quote}"`));
+    const confirmation = el("label", "manual-confirm");
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.checked = Boolean(item.confirmed);
+    checkbox.addEventListener("change", () => {
+      item.confirmed = checkbox.checked;
+      renderReview();
+    });
+    confirmation.appendChild(checkbox);
+    confirmation.appendChild(document.createTextNode("Confirmed manually"));
+    card.appendChild(confirmation);
     manualHost.appendChild(card);
   });
 
+  const unresolved = manual.filter((item) => !item.confirmed).length;
+  const confirmed = manual.length - unresolved;
   $("review-count").textContent =
     `${state.spec.rules.length} requirement${state.spec.rules.length === 1 ? "" : "s"} extracted` +
-    ` · ${manual.length} flagged for manual review`;
+    ` · ${unresolved} manual unresolved` +
+    (confirmed ? ` · ${confirmed} manually confirmed` : "");
 }
 
 function appendField(dl, label, control) {
@@ -407,13 +421,20 @@ function renderReport(report) {
     report.manual_review.forEach((item) => {
       const card = el("div", "result result--manual");
       const head = el("div", "result-head");
-      head.appendChild(el("span", "chip chip--manual", "MANUAL"));
+      head.appendChild(
+        el("span", `chip chip--${item.confirmed ? "pass" : "manual"}`,
+          item.confirmed ? "CONFIRMED" : "MANUAL")
+      );
       head.appendChild(el("h3", null, item.reason));
       card.appendChild(head);
       card.appendChild(el("div", "evidence", `"${item.source_quote}"`));
-      card.appendChild(
-        el("p", "advisory", "SponsorLint does not verify this. Check it yourself before sending.")
-      );
+      card.appendChild(el(
+        "p",
+        "advisory",
+        item.confirmed
+          ? "Confirmed by the creator during spec review."
+          : "SponsorLint does not verify this. Confirm it yourself before sending."
+      ));
       manualHostAppend(card, host);
     });
   }

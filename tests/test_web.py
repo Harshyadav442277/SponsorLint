@@ -33,7 +33,7 @@ async def _sample_campaign_scenario():
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
         page = await client.get("/")
         assert page.status_code == 200
-        assert "Load sample campaign" in page.text
+        assert "Run sample campaign" in page.text
 
         sample = await client.get("/api/sample")
         assert sample.status_code == 200

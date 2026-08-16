@@ -3,243 +3,274 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#0b0c0b">
-  <title>SponsorLint — Executable sponsor briefs</title>
-  <link rel="stylesheet" href="/static/app.css?v=judge-final">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' rx='3' fill='%230b0c0b'/><path d='M4 8.5 7 11l5-7' fill='none' stroke='%23b8f34a' stroke-width='2'/></svg>">
+  <meta name="theme-color" content="#0b0c0a">
+  <title>SponsorLint — Verify before you send</title>
+  <link rel="stylesheet" href="../static/app.css?v=ux-recovery-4">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' rx='3' fill='%230b0c0a'/><path d='M4 8.5 7 11l5-7' fill='none' stroke='%23c6ff52' stroke-width='2'/></svg>">
 </head>
 <body>
 <a class="skip-link" href="#main">Skip to content</a>
 
-<div class="container">
-  <header class="masthead">
-    <div class="brand-lockup">
-      <span class="brand-mark" aria-hidden="true">SL/</span>
-      <div>
-        <h1>SponsorLint</h1>
-        <p>Pre-flight QA for sponsored integrations.</p>
+<div class="app-shell">
+  <header class="app-header">
+    <div class="header-row">
+      <a class="brand" href="#brief" aria-label="SponsorLint home">
+        <span class="brand-symbol" aria-hidden="true">S/</span>
+        <span><strong>SponsorLint</strong><small>Creator preflight</small></span>
+      </a>
+      <div class="header-actions">
+        <span class="local-status"><i aria-hidden="true"></i> Runs locally</span>
+        <button class="text-action" id="reset-global" type="button">Start over</button>
       </div>
     </div>
-    <div class="runtime-badge"><span aria-hidden="true"></span> Local verifier</div>
-  </header>
 
-  <nav class="flow-rail" aria-label="SponsorLint workflow">
-    <ol class="flow" id="flow">
-      <li data-step="upload" aria-current="step"><span>01</span><strong>Brief</strong></li>
-      <li data-step="review"><span>02</span><strong>Review</strong></li>
-      <li data-step="processing"><span>03</span><strong>Check</strong></li>
-      <li data-step="report"><span>04</span><strong>Report</strong></li>
-    </ol>
-  </nav>
+    <nav class="workflow" aria-label="Campaign workflow">
+      <ol class="flow" id="flow">
+        <li data-step="upload">
+          <button type="button" data-nav-step="upload">
+            <span class="step-node" aria-hidden="true">01</span>
+            <span class="step-copy"><strong>Brief</strong><small>Current</small></span>
+          </button>
+        </li>
+        <li data-step="review">
+          <button type="button" data-nav-step="review" disabled>
+            <span class="step-node" aria-hidden="true">02</span>
+            <span class="step-copy"><strong>Review</strong><small>Locked</small></span>
+          </button>
+        </li>
+        <li data-step="processing">
+          <button type="button" data-nav-step="processing" disabled>
+            <span class="step-node" aria-hidden="true">03</span>
+            <span class="step-copy"><strong>Check</strong><small>Locked</small></span>
+          </button>
+        </li>
+        <li data-step="report">
+          <button type="button" data-nav-step="report" disabled>
+            <span class="step-node" aria-hidden="true">04</span>
+            <span class="step-copy"><strong>Report</strong><small>Locked</small></span>
+          </button>
+        </li>
+      </ol>
+    </nav>
+  </header>
 
   <div class="notice notice--error" id="error" role="alert" hidden></div>
 
   <main id="main">
-    <!-- ---------------------------------------------------- 1. brief -->
+    <!-- ===================================================== 01 / BRIEF -->
     <section class="screen is-active" id="screen-upload" aria-labelledby="upload-title">
       <div class="hero">
         <div class="hero-copy">
-          <p class="eyebrow">Sponsor integration QA</p>
-          <h2 id="upload-title">A sponsor brief is a contract. <span>SponsorLint makes it executable.</span></h2>
-          <p class="hero-deck">Turn sponsor language into explicit checks. Approve the rules. Verify the recorded take against the contract.</p>
-          <div class="trust-line" aria-label="AI proposes, you approve, code enforces">
-            <span>AI proposes</span><i aria-hidden="true">→</i><span>You approve</span><i aria-hidden="true">→</i><span>Code enforces</span>
-          </div>
-          <div class="hero-actions">
-            <button class="btn-primary btn-large" id="load-sample" type="button">Load sample campaign <span aria-hidden="true">→</span></button>
-            <span class="action-note">No key. No upload. Full judge path.</span>
-          </div>
+          <p class="eyebrow">SponsorLint / creator preflight</p>
+          <h1 id="upload-title" data-screen-title tabindex="-1">
+            A sponsor brief<br>
+            is a contract.<br>
+            <span>Make it executable.</span>
+          </h1>
+          <p class="hero-support">Catch the line that changed, the claim that slipped in, and the requirement nobody remembered—before the sponsor does.</p>
+          <p class="principle" id="principle-typer" aria-label="AI proposes. You approve. Code enforces.">AI proposes. You approve. Code enforces.</p>
+
+          <button class="sample-cta" id="load-sample" type="button">
+            <span class="cta-index" aria-hidden="true">01</span>
+            <span class="cta-copy"><strong>Run sample campaign</strong><small>Aegis VPN · original V1 + corrected V3 included</small></span>
+            <span class="cta-arrow" aria-hidden="true">→</span>
+          </button>
+
+          <button class="secondary-entry" id="show-custom-brief" type="button" aria-expanded="false" aria-controls="custom-brief-panel">
+            Use your brief <span aria-hidden="true">↓</span>
+          </button>
         </div>
 
-        <figure class="contract-visual" aria-label="A sponsor brief resolving into deterministic checks">
-          <div class="visual-topline"><span>BRIEF_TO_RULES</span><span>v1.0</span></div>
-          <pre aria-hidden="true">┌────────────────────────────────┐
-│  SPONSOR BRIEF                 │
-│                                │
-│  “This video is sponsored...”  │
-│  “Say seventy percent.”        │
-│  “Show Shield Mode.”           │
-│                                │
-├────────────────────────────────┤
-│  MUST_DISCLOSE     <b>✓</b>          │
-│  EXACT_VALUE       <b>✓</b>          │
-│  HUMAN_CHECK       <em>◇</em>          │
-└────────────────────────────────┘</pre>
-          <div class="resolve-line"><span class="prompt-mark">&gt;</span><span id="resolve-text" aria-hidden="true">AI PROPOSES / YOU APPROVE / CODE ENFORCES</span></div>
+        <figure class="glyph-stage" aria-labelledby="glyph-caption">
+          <canvas id="glyph-field" width="640" height="500" aria-hidden="true"></canvas>
+          <div class="stage-chrome" aria-hidden="true"><span>BRIEF SIGNAL</span><span>RESOLVING</span></div>
+          <figcaption id="glyph-caption">A live character field resolving into “Verify before send”.</figcaption>
         </figure>
       </div>
 
-      <dl class="credibility-strip" aria-label="Validated capabilities">
-        <div><dt>Compiler</dt><dd>Gemini · live validated</dd></div>
-        <div><dt>Transcription</dt><dd>Real faster-whisper</dd></div>
-        <div><dt>Verification</dt><dd><strong>0</strong> model calls</dd></div>
-        <div><dt>Evaluation</dt><dd>46 cases · 0 false passes</dd></div>
-      </dl>
+      <div class="landing-proof" aria-label="SponsorLint proof points">
+        <p><span>01</span><strong>Compile</strong> Gemini proposes grounded rules.</p>
+        <p><span>02</span><strong>Approve</strong> You decide what gets enforced.</p>
+        <p><span>03</span><strong>Verify</strong> Deterministic code checks the cut.</p>
+      </div>
 
-      <section class="custom-brief" aria-labelledby="custom-brief-title">
-        <div class="section-intro">
-          <p class="eyebrow">Your campaign</p>
-          <h3 id="custom-brief-title">Compile another brief</h3>
-          <p>PDF, Markdown, text file, or pasted copy. This is the only step that calls Gemini.</p>
+      <section class="brief-composer" id="custom-brief-panel" aria-labelledby="custom-brief-title" hidden>
+        <div class="composer-intro">
+          <p class="eyebrow">Bring your own campaign</p>
+          <h2 id="custom-brief-title">What brief are we checking?</h2>
+          <p>Compile a PDF, Markdown, text file, or pasted brief. Gemini is used here—and nowhere in verification.</p>
         </div>
 
-        <div class="brief-input-grid">
-          <label class="upload-box" for="brief-file">
-            <input class="file-input" type="file" id="brief-file" accept=".pdf,.md,.txt,.markdown">
-            <span class="upload-glyph" aria-hidden="true">↑</span>
-            <strong>Choose a brief file</strong>
-            <span class="upload-meta" id="brief-file-name">PDF · MD · TXT · up to 10 MiB</span>
-          </label>
-          <label class="paste-field" for="brief-text">
-            <span>Or paste the brief</span>
-            <textarea id="brief-text" placeholder="Paste the sponsor brief here…"></textarea>
-          </label>
-        </div>
+        <div class="composer-card">
+          <div class="mode-switch" role="tablist" aria-label="Brief input method">
+            <button id="mode-upload" type="button" role="tab" aria-selected="true" aria-controls="upload-mode">Upload file</button>
+            <button id="mode-paste" type="button" role="tab" aria-selected="false" aria-controls="paste-mode">Paste text</button>
+          </div>
 
-        <div class="actions actions--end">
-          <span class="privacy-note">Brief text goes to Gemini only when you compile.</span>
-          <button class="btn-ghost" id="compile" type="button">Compile brief <span aria-hidden="true">→</span></button>
+          <div class="composer-mode" id="upload-mode" role="tabpanel" aria-labelledby="mode-upload">
+            <label class="drop-zone" id="brief-drop-zone" for="brief-file">
+              <input class="file-input" type="file" id="brief-file" accept=".pdf,.md,.txt,.markdown">
+              <span class="drop-icon" aria-hidden="true">↥</span>
+              <span class="drop-copy"><strong>Drop your sponsor brief</strong><small id="brief-file-name">or choose PDF, MD, or TXT · up to 10 MiB</small></span>
+              <span class="drop-action">Choose file</span>
+            </label>
+          </div>
+
+          <div class="composer-mode" id="paste-mode" role="tabpanel" aria-labelledby="mode-paste" hidden>
+            <label class="paste-editor" for="brief-text">
+              <span>Brief text</span>
+              <textarea id="brief-text" placeholder="Paste the sponsor requirements here…"></textarea>
+            </label>
+          </div>
+
+          <div class="composer-footer">
+            <p><strong>Privacy boundary</strong><span>Brief → Gemini for compilation only</span></p>
+            <button class="button button--primary" id="compile" type="button">Compile requirements <span aria-hidden="true">→</span></button>
+          </div>
         </div>
       </section>
     </section>
 
-    <!-- ---------------------------------------------------- 2. review -->
+    <!-- ==================================================== 02 / REVIEW -->
     <section class="screen" id="screen-review" aria-labelledby="review-title">
-      <header class="screen-heading">
-        <p class="eyebrow">02 / Human trust boundary</p>
-        <h2 id="review-title">Approve what code will enforce.</h2>
-        <p>Every rule stays editable and cites its source. The approved spec—not the model extraction—enters verification.</p>
-      </header>
-
-      <div class="trust-model" aria-label="Trust model">
-        <div><span>01</span><strong>AI proposes</strong><small>Candidate requirements</small></div>
-        <i aria-hidden="true">→</i>
-        <div><span>02</span><strong>You approve</strong><small>Edit, add, or remove</small></div>
-        <i aria-hidden="true">→</i>
-        <div><span>03</span><strong>Code enforces</strong><small>Deterministic checks</small></div>
+      <div class="screen-toolbar">
+        <button class="back-button" id="review-back" type="button"><span aria-hidden="true">←</span> Brief</button>
+        <p>Gemini proposal · human approval required</p>
       </div>
 
-      <section class="panel panel--review" aria-labelledby="compiled-title">
-        <div class="panel-heading">
-          <div>
-            <p class="eyebrow">Inspection table</p>
-            <h3 id="compiled-title">Compiled requirements</h3>
-          </div>
-          <span class="panel-note">Source on the left · rule on the right</span>
-        </div>
+      <header class="screen-intro">
+        <p class="eyebrow">02 / Review</p>
+        <h1 id="review-title" data-screen-title tabindex="-1">Review what will<br>be enforced.</h1>
+        <p>Gemini proposed these requirements from the brief. Nothing reaches the verifier until you approve it.</p>
+      </header>
 
-        <div class="review">
-          <div class="review-head">
-            <div>Source brief</div>
-            <div>Executable rule</div>
-          </div>
-          <div id="review-rows"></div>
-        </div>
+      <div class="review-summary" aria-label="Approval model">
+        <p><span>Proposed by</span><strong>Gemini</strong></p>
+        <p><span>Grounded in</span><strong>Source quotes</strong></p>
+        <p><span>Approved by</span><strong>You</strong></p>
+        <p><span>Enforced by</span><strong>Code</strong></p>
+      </div>
 
-        <div class="review-foot">
-          <span id="review-count" class="tabular"></span>
-          <span class="spacer"></span>
-          <button class="btn-quiet" id="add-rule" type="button">+ Add requirement</button>
-          <button class="btn-primary" id="approve" type="button">Approve spec &amp; choose take <span aria-hidden="true">→</span></button>
+      <section class="requirements" aria-labelledby="requirements-title">
+        <div class="section-heading">
+          <div><p class="eyebrow">Source → requirement</p><h2 id="requirements-title">The approval set</h2></div>
+          <p id="review-count" class="count-copy"></p>
+        </div>
+        <div id="review-rows"></div>
+      </section>
+
+      <section class="manual-zone" aria-labelledby="manual-title">
+        <div class="manual-symbol" aria-hidden="true">◇</div>
+        <div>
+          <p class="eyebrow">Human check</p>
+          <h2 id="manual-title">Outside the transcript</h2>
+          <p>Visual requirements stay separate from the automated score. Confirm only after inspecting the actual media.</p>
+          <div id="manual-list"></div>
         </div>
       </section>
 
-      <section class="panel panel--manual" aria-labelledby="manual-title">
-        <div class="panel-heading">
-          <div>
-            <p class="eyebrow">◇ Human check</p>
-            <h3 id="manual-title">Manual review</h3>
-          </div>
-          <span class="panel-note">Never counted as automated</span>
-        </div>
-        <p class="hint">SponsorLint does not use OCR or infer visual compliance. Confirm only after checking the media yourself; unresolved items keep the verdict at REVIEW.</p>
-        <div id="manual-list"></div>
-      </section>
-
-      <details class="panel source-brief">
-        <summary>View original brief text</summary>
+      <details class="source-drawer">
+        <summary>Read the complete source brief <span aria-hidden="true">+</span></summary>
         <pre class="brief-text" id="brief-display"></pre>
       </details>
-    </section>
 
-    <!-- ---------------------------------------------------- 3. check -->
-    <section class="screen" id="screen-processing" aria-labelledby="check-title">
-      <header class="screen-heading">
-        <p class="eyebrow">03 / Recorded take</p>
-        <h2 id="check-title">Check the media, not a rewrite.</h2>
-        <p>Use a committed Aegis take or upload a fresh recording for real transcription.</p>
-      </header>
-
-      <section class="panel check-panel" aria-labelledby="take-title">
-        <div class="panel-heading">
-          <div>
-            <p class="eyebrow">Input</p>
-            <h3 id="take-title">Choose the recorded segment</h3>
-          </div>
-          <span class="panel-note">MP4 or audio · up to 500 MiB</span>
+      <div class="approval-dock">
+        <div class="approval-proof"><span id="approval-status">Approval required</span><small>AI proposed · human decides</small></div>
+        <div class="approval-actions">
+          <button class="button button--quiet" id="add-rule" type="button">+ Add rule</button>
+          <button class="button button--primary button--large" id="approve" type="button">Approve 0 rules &amp; continue <span aria-hidden="true">→</span></button>
         </div>
-
-        <div class="take-grid">
-          <div class="committed-takes">
-            <span class="field-label">Committed sample takes</span>
-            <select class="sr-only" id="take" aria-label="Committed sample take"></select>
-            <div class="take-options" id="take-options"></div>
-          </div>
-          <label class="upload-box upload-box--video" for="video-file">
-            <input class="file-input" type="file" id="video-file" accept="video/*,audio/*">
-            <span class="upload-glyph" aria-hidden="true">↑</span>
-            <strong>Upload fresh media</strong>
-            <span class="upload-meta" id="video-file-name">Real faster-whisper transcription</span>
-          </label>
-        </div>
-
-        <div class="actions actions--split">
-          <button class="btn-quiet" id="back-to-review" type="button">← Back to spec</button>
-          <button class="btn-primary btn-large" id="run-check" type="button">Run deterministic check <span aria-hidden="true">→</span></button>
-        </div>
-      </section>
-
-      <div class="pipeline" aria-label="Verification pipeline">
-        <div><span>01</span><strong>MP4</strong></div><i aria-hidden="true">→</i>
-        <div><span>02</span><strong>faster-whisper</strong></div><i aria-hidden="true">→</i>
-        <div><span>03</span><strong>raw transcript</strong></div><i aria-hidden="true">→</i>
-        <div><span>04</span><strong>deterministic verify</strong></div>
       </div>
-      <div class="runtime-facts"><span><strong>0</strong> model calls during verify</span><span>Transcript sent to Gemini: <strong>NO</strong></span></div>
-
-      <section class="panel progress-panel" id="progress-panel" aria-live="polite" hidden>
-        <p class="eyebrow">Current run</p>
-        <h3>Verification trace</h3>
-        <ul class="steps" id="steps"></ul>
-      </section>
     </section>
 
-    <!-- ---------------------------------------------------- 4. report -->
-    <section class="screen" id="screen-report" aria-labelledby="report-screen-title">
-      <header class="report-heading">
-        <div>
-          <p class="eyebrow">04 / Evidence report</p>
-          <h2 id="report-screen-title">Send decision</h2>
-        </div>
-        <span>Generated from the approved spec</span>
+    <!-- ===================================================== 03 / CHECK -->
+    <section class="screen" id="screen-processing" aria-labelledby="check-title">
+      <div class="screen-toolbar">
+        <button class="back-button" id="back-to-review" type="button"><span aria-hidden="true">←</span> Review</button>
+        <p id="approved-rule-count">Approved specification</p>
+      </div>
+
+      <header class="screen-intro screen-intro--check">
+        <p class="eyebrow">03 / Check</p>
+        <h1 id="check-title" data-screen-title tabindex="-1">Which sponsor cut<br>should we verify?</h1>
+        <p>Choose a committed sample take or bring a fresh recording. The transcript never goes back to Gemini.</p>
       </header>
+
+      <section class="media-choice" aria-labelledby="media-choice-title">
+        <div class="section-heading">
+          <div><p class="eyebrow">Media input</p><h2 id="media-choice-title">Select one cut</h2></div>
+          <p class="count-copy">MP4, MOV, M4A, WAV · up to 500 MiB</p>
+        </div>
+        <select class="sr-only" id="take" aria-label="Committed sample take"></select>
+        <div class="take-options" id="take-options"></div>
+
+        <label class="video-drop" id="video-drop-zone" for="video-file">
+          <input class="file-input" type="file" id="video-file" accept="video/*,audio/*">
+          <span class="video-drop-icon" aria-hidden="true">↥</span>
+          <span><strong>Drop a fresh sponsor cut</strong><small id="video-file-name">Real faster-whisper transcription</small></span>
+          <span class="drop-action">Choose media</span>
+        </label>
+      </section>
+
+      <section class="proof-board" aria-label="Verification trust facts">
+        <article><span>Transcript engine</span><strong>faster-whisper</strong><small>Raw timestamped speech</small></article>
+        <article class="proof-board__focus"><span>Transcript → Gemini</span><strong>NO</strong><small>Never leaves deterministic verification</small></article>
+        <article class="proof-board__focus"><span>Model calls during verify</span><strong>0</strong><small>Same input, same result</small></article>
+      </section>
+
+      <section class="run-state" id="progress-panel" aria-live="polite" hidden>
+        <div class="resolve-indicator" aria-hidden="true" id="resolve-indicator">VERIFY</div>
+        <div><p class="eyebrow">Current run</p><h2 id="run-state-title">Checking media</h2><ul class="steps" id="steps"></ul></div>
+      </section>
+
+      <div class="check-dock">
+        <div><span>Selected cut</span><strong id="check-summary">Choose a take</strong></div>
+        <button class="button button--primary button--large" id="run-check" type="button">Verify selected cut <span aria-hidden="true">→</span></button>
+      </div>
+    </section>
+
+    <!-- ==================================================== 04 / REPORT -->
+    <section class="screen" id="screen-report" aria-labelledby="report-title">
+      <div class="screen-toolbar">
+        <button class="back-button" id="report-back" type="button"><span aria-hidden="true">←</span> Change cut</button>
+        <p>Approved spec · deterministic evidence</p>
+      </div>
+
+      <header class="report-intro">
+        <div><p class="eyebrow">04 / Report</p><h1 id="report-title" data-screen-title tabindex="-1">Can I send this?</h1></div>
+        <p id="report-context">Sponsor integration preflight</p>
+      </header>
+
       <div class="report-column">
         <div id="verdict"></div>
         <div id="findings"></div>
 
-        <div class="actions report-actions">
-          <button class="btn-quiet" id="recheck" type="button">← Edit spec and re-run</button>
-          <button class="btn-ghost" id="start-over" type="button">Start over</button>
+        <div class="report-footer-actions">
+          <button class="button button--quiet" id="recheck" type="button">Edit approved rules</button>
+          <button class="button button--primary" id="check-another" type="button">Check another cut <span aria-hidden="true">→</span></button>
         </div>
       </div>
     </section>
   </main>
 
   <footer class="site-footer">
-    <span>SponsorLint / local-first pre-flight QA</span>
-    <span>AI proposes · humans approve · code enforces</span>
+    <span>SponsorLint / verify before send</span>
+    <span>AI proposes · you approve · code enforces</span>
   </footer>
 </div>
-<script src="/static/app.js?v=judge-final"></script>
+
+<dialog class="reset-dialog" id="reset-dialog" aria-labelledby="reset-title">
+  <form method="dialog">
+    <p class="eyebrow">Start over</p>
+    <h2 id="reset-title">Clear this campaign?</h2>
+    <p>Your current brief, approved rules, selected cut, and report will be removed from this browser session.</p>
+    <div class="dialog-actions">
+      <button class="button button--quiet" value="cancel">Keep working</button>
+      <button class="button button--danger" id="confirm-reset" value="confirm">Clear campaign</button>
+    </div>
+  </form>
+</dialog>
+
+<script src="../static/app.js?v=ux-recovery-4"></script>
 </body>
 </html>

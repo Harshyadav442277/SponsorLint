@@ -1,12 +1,23 @@
-/* SponsorLint UI. Vanilla JS, no build step, no framework. */
+/* SponsorLint UI — one local-first workflow, no framework, no build step. */
 
-const state = {
+const SESSION_KEY = "sponsorlint-ui-v2";
+const STEP_ORDER = ["upload", "review", "processing", "report"];
+const STEP_HASH = { upload: "brief", review: "review", processing: "check", report: "report" };
+const HASH_STEP = { brief: "upload", review: "review", check: "processing", report: "report" };
+
+const initialState = () => ({
   briefText: "",
   spec: null,
   takes: [],
   specId: null,
-};
+  lastReport: null,
+  lastTake: "v1",
+  current: "upload",
+  maxStep: 0,
+  customBriefOpen: false,
+});
 
+const state = initialState();
 const $ = (id) => document.getElementById(id);
 const el = (tag, cls, text) => {
   const node = document.createElement(tag);
@@ -15,65 +26,108 @@ const el = (tag, cls, text) => {
   return node;
 };
 
-function resolveThesis() {
-  const node = $("resolve-text");
-  if (!node) return;
-  const final = "AI PROPOSES / YOU APPROVE / CODE ENFORCES";
-  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-    node.textContent = final;
-    return;
+function restoreState() {
+  try {
+    const saved = JSON.parse(sessionStorage.getItem(SESSION_KEY) || "null");
+    if (saved && typeof saved === "object") Object.assign(state, saved);
+  } catch (_) {
+    sessionStorage.removeItem(SESSION_KEY);
   }
+}
 
-  const glyphs = "#/[]{}01+*";
-  const frames = 14;
-  let frame = 0;
-  const timer = window.setInterval(() => {
-    const settled = Math.ceil((frame / frames) * final.length);
-    node.textContent = [...final].map((character, index) => {
-      if (character === " " || index < settled) return character;
-      return glyphs[(index * 3 + frame * 5) % glyphs.length];
-    }).join("");
-    frame += 1;
-    if (frame > frames) {
-      window.clearInterval(timer);
-      node.textContent = final;
+function persistState() {
+  try {
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify(state));
+  } catch (_) {
+    /* Session persistence is a convenience, never a requirement. */
+  }
+}
+
+function stepIndex(name) {
+  return STEP_ORDER.indexOf(name);
+}
+
+function canAccess(name) {
+  const index = stepIndex(name);
+  if (index < 0 || index > state.maxStep) return false;
+  if (name === "review") return Boolean(state.spec);
+  if (name === "processing") return Boolean(state.spec && state.specId);
+  if (name === "report") return Boolean(state.lastReport);
+  return true;
+}
+
+function updateWorkflow() {
+  const currentIndex = stepIndex(state.current);
+  document.querySelectorAll("#flow li").forEach((item) => {
+    const name = item.dataset.step;
+    const index = stepIndex(name);
+    const button = item.querySelector("button");
+    const status = item.querySelector("small");
+    item.classList.remove("is-current", "is-complete", "is-available", "is-locked");
+
+    if (name === state.current) {
+      item.classList.add("is-current");
+      button.disabled = true;
+      button.setAttribute("aria-current", "step");
+      status.textContent = "Current";
+    } else if (canAccess(name) && index < state.maxStep) {
+      item.classList.add("is-complete");
+      button.disabled = false;
+      button.removeAttribute("aria-current");
+      status.textContent = "Complete";
+      item.querySelector(".step-node").textContent = "✓";
+    } else if (canAccess(name)) {
+      item.classList.add("is-available");
+      button.disabled = false;
+      button.removeAttribute("aria-current");
+      status.textContent = index < currentIndex ? "Complete" : "Available";
+      item.querySelector(".step-node").textContent = String(index + 1).padStart(2, "0");
+    } else {
+      item.classList.add("is-locked");
+      button.disabled = true;
+      button.removeAttribute("aria-current");
+      status.textContent = "Locked";
+      item.querySelector(".step-node").textContent = String(index + 1).padStart(2, "0");
     }
-  }, 58);
-}
 
-function showFileName(inputId, labelId, fallback) {
-  const inputNode = $(inputId);
-  const labelNode = $(labelId);
-  inputNode.addEventListener("change", () => {
-    labelNode.textContent = inputNode.files[0]?.name || fallback;
+    if (name === state.current) {
+      item.querySelector(".step-node").textContent = String(index + 1).padStart(2, "0");
+    }
   });
 }
 
-resolveThesis();
-showFileName("brief-file", "brief-file-name", "PDF · MD · TXT · up to 10 MiB");
-showFileName("video-file", "video-file-name", "Real faster-whisper transcription");
-
-/* ----------------------------------------------------------- screens */
-
-function show(name) {
-  document.querySelectorAll(".screen").forEach((s) =>
-    s.classList.toggle("is-active", s.id === `screen-${name}`)
-  );
-  document.querySelectorAll("#flow li").forEach((li) => {
-    const step = li.dataset.step;
-    if (step === name) li.setAttribute("aria-current", "step");
-    else li.removeAttribute("aria-current");
+function show(name, { historyMode = "push", focus = true } = {}) {
+  if (!canAccess(name)) return false;
+  state.current = name;
+  document.querySelectorAll(".screen").forEach((screen) => {
+    screen.classList.toggle("is-active", screen.id === `screen-${name}`);
   });
+  updateWorkflow();
+  persistState();
+
+  const hash = `#${STEP_HASH[name]}`;
+  if (historyMode === "replace") history.replaceState({ step: name }, "", hash);
+  if (historyMode === "push" && location.hash !== hash) history.pushState({ step: name }, "", hash);
+
   window.scrollTo({ top: 0, behavior: "instant" });
+  if (focus) {
+    window.setTimeout(() => {
+      document.querySelector(`#screen-${name} [data-screen-title]`)?.focus({ preventScroll: true });
+    }, 30);
+  }
+  return true;
 }
 
-function markDone(name) {
-  const li = document.querySelector(`#flow li[data-step="${name}"]`);
-  if (li) li.dataset.done = "true";
+function navigate(name) {
+  if (name === "review" && state.spec) renderReview();
+  if (name === "processing" && state.specId) renderTakes();
+  if (name === "report" && state.lastReport) renderReport(state.lastReport);
+  show(name);
 }
 
 function fail(message) {
   const box = $("error");
+  box.className = "notice notice--error";
   box.textContent = message;
   box.hidden = false;
   box.scrollIntoView({ block: "nearest" });
@@ -89,7 +143,7 @@ async function call(url, options) {
   try {
     body = await response.json();
   } catch (_) {
-    /* non-JSON error body */
+    /* A proxy may return a non-JSON failure page. */
   }
   if (!response.ok) {
     const detail = (body && (body.detail || body.message)) || `Request failed (${response.status}).`;
@@ -98,259 +152,547 @@ async function call(url, options) {
   return body;
 }
 
-/* ------------------------------------------------------------ step 1 */
+/* ============================================================= motion */
+
+function runTyper() {
+  const host = $("principle-typer");
+  if (!host) return;
+  const source = host.textContent;
+  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  host.textContent = "";
+  const characters = [];
+
+  source.split(/(\s+)/).forEach((part) => {
+    if (/^\s+$/.test(part)) {
+      host.appendChild(document.createTextNode(part));
+      return;
+    }
+    const word = el("span", "typer-word");
+    [...part].forEach((character) => {
+      const span = el("span", "typer-char", character);
+      word.appendChild(span);
+      characters.push(span);
+    });
+    host.appendChild(word);
+  });
+
+  if (reduced) return;
+  const states = ["is-block", "is-inverse", "is-outline"];
+  let frame = 0;
+  const frames = 13;
+  const timer = window.setInterval(() => {
+    characters.forEach((character, index) => {
+      character.className = "typer-char";
+      const local = frame - index * 0.28;
+      if (local >= 0 && local < 4.5) {
+        character.classList.add(states[(index + Math.floor(local)) % states.length]);
+      }
+    });
+    frame += 1;
+    if (frame > frames + characters.length * 0.28) {
+      window.clearInterval(timer);
+      characters.forEach((character) => (character.className = "typer-char"));
+    }
+  }, 52);
+}
+
+function initGlyphField() {
+  const canvas = $("glyph-field");
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d", { alpha: false });
+  if (!ctx) return;
+  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let animationFrame = 0;
+  let resizeTimer = 0;
+
+  function seeded(index, offset = 0) {
+    const value = Math.sin((index + 1) * 91.345 + offset * 17.17) * 43758.5453;
+    return value - Math.floor(value);
+  }
+
+  function build() {
+    window.cancelAnimationFrame(animationFrame);
+    const rect = canvas.getBoundingClientRect();
+    const width = Math.max(280, Math.round(rect.width));
+    const height = Math.max(240, Math.round(rect.height));
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.round(width * dpr);
+    canvas.height = Math.round(height * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    const mask = document.createElement("canvas");
+    mask.width = width;
+    mask.height = height;
+    const maskContext = mask.getContext("2d");
+    maskContext.fillStyle = "#fff";
+    maskContext.textAlign = "center";
+    maskContext.textBaseline = "middle";
+    const mobile = width < 430;
+    const fontSize = Math.floor(Math.min(width / 5.9, height / 4.4));
+    maskContext.font = `800 ${fontSize}px ${getComputedStyle(document.body).fontFamily}`;
+    const lines = ["VERIFY", "BEFORE", "SEND"];
+    const lineGap = fontSize * .9;
+    const centerY = height / 2 + fontSize * .05;
+    lines.forEach((line, index) => {
+      maskContext.fillText(line, width / 2, centerY + (index - 1) * lineGap);
+    });
+
+    const pixels = maskContext.getImageData(0, 0, width, height).data;
+    const step = mobile ? 9 : 8;
+    const targets = [];
+    for (let y = step; y < height - step; y += step) {
+      for (let x = step; x < width - step; x += step) {
+        if (pixels[(y * width + x) * 4 + 3] > 120) targets.push({ x, y });
+      }
+    }
+    const maxParticles = mobile ? 390 : 680;
+    const stride = Math.max(1, Math.ceil(targets.length / maxParticles));
+    const selected = targets.filter((_, index) => index % stride === 0).slice(0, maxParticles);
+    const glyphs = "#%+=<>[]{}01/";
+    const particles = selected.map((target, index) => {
+      const angle = seeded(index, 1) * Math.PI * 8;
+      const radius = Math.max(width, height) * (.18 + seeded(index, 2) * .78);
+      return {
+        tx: target.x,
+        ty: target.y,
+        sx: width / 2 + Math.cos(angle) * radius,
+        sy: height / 2 + Math.sin(angle) * radius,
+        angle,
+        glyph: glyphs[index % glyphs.length],
+        delay: seeded(index, 3) * .2,
+      };
+    });
+    const atmosphere = Array.from({ length: mobile ? 38 : 76 }, (_, index) => ({
+      x: seeded(index, 5) * width,
+      y: seeded(index, 6) * height,
+      glyph: glyphs[(index * 5) % glyphs.length],
+      drift: seeded(index, 7) * 8 - 4,
+    }));
+    const start = performance.now();
+    const duration = reduced ? 1 : 1120;
+
+    function ease(value) {
+      const v = Math.max(0, Math.min(1, value));
+      return 1 - Math.pow(1 - v, 3);
+    }
+
+    function draw(now) {
+      const elapsed = now - start;
+      const progress = Math.min(1, elapsed / duration);
+      ctx.fillStyle = "#090a08";
+      ctx.fillRect(0, 0, width, height);
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+
+      ctx.font = `500 ${mobile ? 8 : 9}px ${getComputedStyle(canvas).fontFamily || "monospace"}`;
+      atmosphere.forEach((item, index) => {
+        const drift = reduced ? 0 : item.drift * Math.sin(progress * Math.PI + index);
+        ctx.fillStyle = "rgba(180,185,171,.105)";
+        ctx.fillText(item.glyph, item.x + drift, item.y);
+      });
+
+      particles.forEach((particle, index) => {
+        const local = ease((progress - particle.delay) / (1 - particle.delay));
+        const spin = (1 - local) * Math.PI * 1.7;
+        const x = particle.sx + (particle.tx - particle.sx) * local + Math.cos(particle.angle + spin) * (1 - local) * 18;
+        const y = particle.sy + (particle.ty - particle.sy) * local + Math.sin(particle.angle + spin) * (1 - local) * 18;
+        const glyph = local < .78 ? glyphs[(index + Math.floor(progress * 30)) % glyphs.length] : particle.glyph;
+        const alpha = .18 + local * .76;
+
+        if (!reduced && local > .25 && local < .88) {
+          ctx.fillStyle = `rgba(255,92,76,${alpha * .13})`;
+          ctx.fillText(glyph, x - 1.4, y);
+          ctx.fillStyle = `rgba(87,205,255,${alpha * .10})`;
+          ctx.fillText(glyph, x + 1.4, y);
+        }
+        ctx.fillStyle = `rgba(224,232,211,${alpha})`;
+        ctx.fillText(glyph, x, y);
+      });
+
+      ctx.fillStyle = "rgba(255,255,255,.018)";
+      for (let y = 2; y < height; y += 5) ctx.fillRect(0, y, width, 1);
+      ctx.fillStyle = "rgba(0,0,0,.18)";
+      ctx.fillRect(0, 0, width, 14);
+      ctx.fillRect(0, height - 14, width, 14);
+      ctx.fillRect(0, 0, 10, height);
+      ctx.fillRect(width - 10, 0, 10, height);
+
+      if (progress < 1) animationFrame = window.requestAnimationFrame(draw);
+    }
+
+    animationFrame = window.requestAnimationFrame(draw);
+  }
+
+  build();
+  window.addEventListener("resize", () => {
+    window.clearTimeout(resizeTimer);
+    resizeTimer = window.setTimeout(build, 140);
+  });
+}
+
+function animateResolveIndicator() {
+  const node = $("resolve-indicator");
+  const final = "VERIFY";
+  const glyphs = "#/[]{}01+*";
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    node.textContent = final;
+    return () => {};
+  }
+  let frame = 0;
+  const timer = window.setInterval(() => {
+    node.textContent = [...final].map((character, index) =>
+      index < frame / 2 ? character : glyphs[(index * 3 + frame) % glyphs.length]
+    ).join("");
+    frame = (frame + 1) % 18;
+  }, 85);
+  return () => {
+    window.clearInterval(timer);
+    node.textContent = final;
+  };
+}
+
+/* ============================================================= Brief */
+
+function openCustomBrief() {
+  state.customBriefOpen = true;
+  $("custom-brief-panel").hidden = false;
+  $("show-custom-brief").setAttribute("aria-expanded", "true");
+  persistState();
+  $("custom-brief-panel").scrollIntoView({ behavior: "smooth", block: "start" });
+  window.setTimeout(() => $("mode-upload").focus(), 350);
+}
+
+function setBriefMode(mode) {
+  const upload = mode === "upload";
+  $("mode-upload").setAttribute("aria-selected", String(upload));
+  $("mode-paste").setAttribute("aria-selected", String(!upload));
+  $("upload-mode").hidden = !upload;
+  $("paste-mode").hidden = upload;
+  (upload ? $("brief-file") : $("brief-text")).focus();
+}
 
 $("load-sample").addEventListener("click", async () => {
   clearError();
+  const button = $("load-sample");
+  button.disabled = true;
+  button.querySelector(".cta-copy strong").textContent = "Loading Aegis campaign…";
   try {
     const data = await call("/api/sample");
     state.briefText = data.brief_text;
     state.spec = data.spec;
     state.takes = data.takes;
-    enterReview();
-  } catch (err) {
-    fail(err.message);
+    state.specId = null;
+    state.lastReport = null;
+    state.lastTake = "v1";
+    state.maxStep = 1;
+    $("brief-display").textContent = state.briefText;
+    renderReview();
+    show("review");
+  } catch (error) {
+    fail(`${error.message} Try the sample again, or use your own brief.`);
+  } finally {
+    button.disabled = false;
+    button.querySelector(".cta-copy strong").textContent = "Run sample campaign";
   }
 });
+
+$("show-custom-brief").addEventListener("click", openCustomBrief);
+$("mode-upload").addEventListener("click", () => setBriefMode("upload"));
+$("mode-paste").addEventListener("click", () => setBriefMode("paste"));
 
 $("compile").addEventListener("click", async () => {
   clearError();
   const file = $("brief-file").files[0];
   const text = $("brief-text").value.trim();
   if (!file && !text) {
-    fail("Upload a brief file or paste the brief text first.");
+    fail("Add a brief first. Choose a file or paste the sponsor requirements.");
     return;
   }
 
   const form = new FormData();
   if (file) form.append("brief", file);
   form.append("text", text);
-
   const button = $("compile");
   button.disabled = true;
-  button.textContent = "Compiling…";
+  button.textContent = "Compiling grounded rules…";
   try {
     const data = await call("/api/compile", { method: "POST", body: form });
     state.briefText = data.brief_text;
     state.spec = data.spec;
-    // Committed takes belong only to the committed Aegis sample campaign.
-    // A custom brief must be checked against the user's own upload.
     state.takes = [];
-    enterReview();
-  } catch (err) {
-    fail(err.message);
+    state.specId = null;
+    state.lastReport = null;
+    state.lastTake = "";
+    state.maxStep = 1;
+    $("brief-display").textContent = state.briefText;
+    renderReview();
+    show("review");
+  } catch (error) {
+    fail(`${error.message} Your brief is still here—adjust it and retry.`);
   } finally {
     button.disabled = false;
-    button.textContent = "Compile brief →";
+    button.innerHTML = 'Compile requirements <span aria-hidden="true">→</span>';
   }
 });
 
-/* ------------------------------------------------------------ step 2 */
+/* ============================================================= Review */
 
-function enterReview() {
-  markDone("upload");
-  $("brief-display").textContent = state.briefText;
-  renderReview();
-  show("review");
-}
-
-const TYPES = [
-  "MUST_SAY",
-  "MUST_NOT_SAY",
-  "EXACT_VALUE",
-  "MUST_DISCLOSE",
-  "DURATION",
-  "URL_OR_CTA",
-];
-
-const RULE_PAYLOAD_KEYS = [
-  "expected",
-  "phrases",
-  "min_seconds",
-  "max_seconds",
-  "within_first_seconds",
-  "within_last_seconds",
-];
+const TYPES = ["MUST_SAY", "MUST_NOT_SAY", "EXACT_VALUE", "MUST_DISCLOSE", "DURATION", "URL_OR_CTA"];
+const RULE_PAYLOAD_KEYS = ["expected", "phrases", "min_seconds", "max_seconds", "within_first_seconds", "within_last_seconds"];
 
 function fieldsFor(rule) {
   switch (rule.type) {
     case "MUST_SAY":
     case "MUST_NOT_SAY":
-      return [{ key: "phrases", label: "phrases", kind: "lines" }];
+      return [{ key: "phrases", label: "Phrases — one per line", kind: "lines" }];
     case "EXACT_VALUE":
-      return [{ key: "expected", label: "expected", kind: "text" }];
+      return [{ key: "expected", label: "Enforced value", kind: "text" }];
     case "URL_OR_CTA":
       return [
-        { key: "expected", label: "expected", kind: "text" },
-        { key: "within_last_seconds", label: "within_last_seconds", kind: "number" },
+        { key: "expected", label: "URL or CTA", kind: "text" },
+        { key: "within_last_seconds", label: "Required within final seconds", kind: "number" },
       ];
     case "DURATION":
       return [
-        { key: "min_seconds", label: "min_seconds", kind: "number" },
-        { key: "max_seconds", label: "max_seconds", kind: "number" },
+        { key: "min_seconds", label: "Minimum seconds", kind: "number" },
+        { key: "max_seconds", label: "Maximum seconds", kind: "number" },
       ];
     case "MUST_DISCLOSE":
-      return [{ key: "within_first_seconds", label: "within_first_seconds", kind: "number" }];
+      return [{ key: "within_first_seconds", label: "Required within first seconds", kind: "number" }];
     default:
       return [];
   }
 }
 
+function ruleDisplayValue(rule) {
+  if (rule.type === "MUST_SAY") return (rule.phrases || []).map((value) => `“${value}”`).join(" or ") || "Phrase required";
+  if (rule.type === "MUST_NOT_SAY") return `Never say ${(rule.phrases || []).map((value) => `“${value}”`).join(" or ")}`;
+  if (rule.type === "EXACT_VALUE") return rule.expected || "Exact value required";
+  if (rule.type === "MUST_DISCLOSE") return `Within the first ${rule.within_first_seconds ?? "?"} seconds`;
+  if (rule.type === "DURATION") return `${rule.min_seconds ?? "?"}–${rule.max_seconds ?? "?"} seconds`;
+  if (rule.type === "URL_OR_CTA") {
+    const timing = rule.within_last_seconds != null ? ` · final ${rule.within_last_seconds}s` : "";
+    return `${rule.expected || "URL required"}${timing}`;
+  }
+  return rule.label || "Requirement";
+}
+
+function markSpecDirty() {
+  state.specId = null;
+  state.lastReport = null;
+  state.maxStep = Math.min(state.maxStep, 1);
+  $("approval-status").textContent = "Changes need approval";
+  updateWorkflow();
+  persistState();
+}
+
+function editorField(label, control, wide = false) {
+  const wrapper = el("label", `editor-field${wide ? " editor-field--wide" : ""}`);
+  wrapper.appendChild(el("span", null, label));
+  wrapper.appendChild(control);
+  return wrapper;
+}
+
+function makeInput(type, value, onInput) {
+  const input = document.createElement("input");
+  input.type = type;
+  input.value = value ?? "";
+  if (type === "number") input.step = "any";
+  input.addEventListener("input", () => onInput(input.value));
+  return input;
+}
+
+function renderRuleCard(rule, index) {
+  const card = el("article", "rule-card");
+  card.dataset.ruleId = rule.id;
+  const grid = el("div", "rule-card-grid");
+
+  const source = el("div", "source-citation");
+  const sourceLabel = el("div", "citation-label");
+  sourceLabel.appendChild(el("span", null, "Source / brief"));
+  sourceLabel.appendChild(el("span", null, `Citation ${String(index + 1).padStart(2, "0")}`));
+  source.appendChild(sourceLabel);
+  source.appendChild(el("blockquote", null, rule.source_quote || "Added manually during review."));
+  grid.appendChild(source);
+
+  const bridge = el("div", "rule-bridge");
+  bridge.appendChild(el("span", null, "→"));
+  grid.appendChild(bridge);
+
+  const requirement = el("div", "requirement-view");
+  const requirementLabel = el("div", "requirement-label");
+  requirementLabel.appendChild(el("span", "rule-id", String(rule.id || `r${index + 1}`).toUpperCase()));
+  requirementLabel.appendChild(el("span", "rule-type", rule.type.replaceAll("_", " ")));
+  requirement.appendChild(requirementLabel);
+  requirement.appendChild(el("h3", null, rule.label || "Untitled requirement"));
+  const value = el("p", "rule-value", ruleDisplayValue(rule));
+  requirement.appendChild(value);
+  const meta = el("div", "rule-meta");
+  meta.appendChild(el("span", null, `${rule.severity || "error"} severity`));
+  if (rule.needs_review) meta.appendChild(el("span", "rule-needs-input", "Needs human input"));
+  requirement.appendChild(meta);
+
+  const details = el("details", "rule-editor");
+  details.appendChild(el("summary", null, "Edit requirement"));
+  const panel = el("div", "editor-panel");
+
+  const typeSelect = document.createElement("select");
+  TYPES.forEach((type) => {
+    const option = el("option", null, type.replaceAll("_", " "));
+    option.value = type;
+    option.selected = type === rule.type;
+    typeSelect.appendChild(option);
+  });
+  typeSelect.addEventListener("change", () => {
+    RULE_PAYLOAD_KEYS.forEach((key) => delete rule[key]);
+    rule.type = typeSelect.value;
+    rule.needs_review = false;
+    markSpecDirty();
+    renderReview();
+  });
+  panel.appendChild(editorField("Rule type", typeSelect));
+
+  const severity = document.createElement("select");
+  ["error", "warning"].forEach((level) => {
+    const option = el("option", null, level);
+    option.value = level;
+    option.selected = level === (rule.severity || "error");
+    severity.appendChild(option);
+  });
+  severity.addEventListener("change", () => {
+    rule.severity = severity.value;
+    markSpecDirty();
+    meta.firstChild.textContent = `${severity.value} severity`;
+  });
+  panel.appendChild(editorField("Severity", severity));
+
+  const labelInput = makeInput("text", rule.label, (next) => {
+    rule.label = next;
+    requirement.querySelector("h3").textContent = next || "Untitled requirement";
+    markSpecDirty();
+  });
+  panel.appendChild(editorField("Human-readable title", labelInput, true));
+
+  fieldsFor(rule).forEach((field) => {
+    let control;
+    if (field.kind === "lines") {
+      control = document.createElement("textarea");
+      control.value = (rule[field.key] || []).join("\n");
+      control.addEventListener("input", () => {
+        rule[field.key] = control.value.split("\n").map((value) => value.trim()).filter(Boolean);
+        value.textContent = ruleDisplayValue(rule);
+        markSpecDirty();
+      });
+    } else {
+      control = makeInput(field.kind, rule[field.key], (next) => {
+        rule[field.key] = field.kind === "number" ? (next === "" ? null : Number(next)) : next;
+        if (next !== "" && ["within_first_seconds", "within_last_seconds"].includes(field.key)) rule.needs_review = false;
+        value.textContent = ruleDisplayValue(rule);
+        markSpecDirty();
+      });
+    }
+    panel.appendChild(editorField(field.label, control, field.kind === "lines"));
+  });
+
+  const sourceInput = document.createElement("textarea");
+  sourceInput.value = rule.source_quote || "";
+  sourceInput.addEventListener("input", () => {
+    rule.source_quote = sourceInput.value;
+    source.querySelector("blockquote").textContent = sourceInput.value || "Added manually during review.";
+    markSpecDirty();
+  });
+  panel.appendChild(editorField("Source quote", sourceInput, true));
+
+  const actions = el("div", "editor-actions");
+  const remove = el("button", "delete-rule", "Delete this rule");
+  remove.type = "button";
+  remove.addEventListener("click", () => {
+    state.spec.rules.splice(index, 1);
+    markSpecDirty();
+    renderReview();
+  });
+  const close = el("button", "close-editor", "Done editing");
+  close.type = "button";
+  close.addEventListener("click", () => {
+    details.open = false;
+    details.querySelector("summary").focus();
+  });
+  actions.appendChild(remove);
+  actions.appendChild(close);
+  panel.appendChild(actions);
+  details.appendChild(panel);
+  requirement.appendChild(details);
+  grid.appendChild(requirement);
+  card.appendChild(grid);
+  return card;
+}
+
 function renderReview() {
+  if (!state.spec) return;
+  $("brief-display").textContent = state.briefText;
   const host = $("review-rows");
   host.innerHTML = "";
-
-  state.spec.rules.forEach((rule, index) => {
-    const row = el("div", "review-row");
-    if (rule.needs_review) row.classList.add("is-review");
-
-    const source = el("div", "review-source");
-    source.textContent = `"${rule.source_quote}"`;
-    row.appendChild(source);
-
-    const right = el("div", "review-rule");
-
-    const head = el("div", "rule-head");
-    const typeSelect = el("select");
-    typeSelect.className = "chip chip--type";
-    TYPES.forEach((t) => {
-      const opt = el("option", null, t);
-      opt.value = t;
-      if (t === rule.type) opt.selected = true;
-      typeSelect.appendChild(opt);
-    });
-    typeSelect.addEventListener("change", () => {
-      RULE_PAYLOAD_KEYS.forEach((key) => delete rule[key]);
-      rule.type = typeSelect.value;
-      rule.needs_review = false;
-      renderReview();
-    });
-    head.appendChild(typeSelect);
-
-    if (rule.needs_review) head.appendChild(el("span", "chip chip--manual", "NEEDS INPUT"));
-
-    const actions = el("div", "rule-actions");
-    const del = el("button", null, "Delete");
-    del.type = "button";
-    del.addEventListener("click", () => {
-      state.spec.rules.splice(index, 1);
-      renderReview();
-    });
-    actions.appendChild(del);
-    head.appendChild(el("span", "", ""));
-    head.lastChild.style.flex = "1 1 auto";
-    head.appendChild(actions);
-    right.appendChild(head);
-
-    const dl = el("dl", "rule-fields");
-
-    appendField(dl, "label", input("text", rule.label || "", (v) => (rule.label = v)));
-
-    fieldsFor(rule).forEach((f) => {
-      let control;
-      if (f.kind === "lines") {
-        control = document.createElement("textarea");
-        control.rows = Math.max(1, (rule[f.key] || []).length);
-        control.value = (rule[f.key] || []).join("\n");
-        control.style.minHeight = "0";
-        control.addEventListener("input", () => {
-          rule[f.key] = control.value.split("\n").map((s) => s.trim()).filter(Boolean);
-        });
-      } else if (f.kind === "number") {
-        control = input("number", rule[f.key] ?? "", (v) => {
-          rule[f.key] = v === "" ? null : Number(v);
-          if (f.key === "within_first_seconds" && v !== "") rule.needs_review = false;
-        });
-      } else {
-        control = input("text", rule[f.key] ?? "", (v) => (rule[f.key] = v));
-      }
-      appendField(dl, f.label, control);
-    });
-
-    const sev = el("select");
-    ["error", "warning"].forEach((s) => {
-      const opt = el("option", null, s);
-      opt.value = s;
-      if (s === (rule.severity || "error")) opt.selected = true;
-      sev.appendChild(opt);
-    });
-    sev.addEventListener("change", () => (rule.severity = sev.value));
-    appendField(dl, "severity", sev);
-
-    right.appendChild(dl);
-    row.appendChild(right);
-    host.appendChild(row);
-  });
+  state.spec.rules.forEach((rule, index) => host.appendChild(renderRuleCard(rule, index)));
 
   const manual = state.spec.manual_review || [];
   const manualHost = $("manual-list");
   manualHost.innerHTML = "";
-  if (!manual.length) {
-    manualHost.appendChild(el("p", "muted", "Nothing in this brief needs manual review."));
-  }
-  manual.forEach((item) => {
-    const card = el("div", "result result--manual");
-    const head = el("div", "result-head");
-    head.appendChild(el("span", "chip chip--manual", "◇ HUMAN CHECK"));
-    head.appendChild(el("h3", null, item.reason));
-    card.appendChild(head);
-    card.appendChild(el("div", "evidence", `"${item.source_quote}"`));
+  if (!manual.length) manualHost.appendChild(el("p", "manual-empty", "No visual or manual requirements in this brief."));
+  manual.forEach((item, index) => {
+    const row = el("article", "manual-item");
+    const copy = el("div");
+    copy.appendChild(el("h3", null, item.reason));
+    copy.appendChild(el("blockquote", null, `“${item.source_quote}”`));
+    row.appendChild(copy);
     const confirmation = el("label", "manual-confirm");
     const checkbox = document.createElement("input");
     checkbox.type = "checkbox";
     checkbox.checked = Boolean(item.confirmed);
     checkbox.addEventListener("change", () => {
-      item.confirmed = checkbox.checked;
-      renderReview();
+      state.spec.manual_review[index].confirmed = checkbox.checked;
+      markSpecDirty();
+      renderReviewCounts();
     });
     confirmation.appendChild(checkbox);
-    confirmation.appendChild(document.createTextNode("Confirmed manually"));
-    card.appendChild(confirmation);
-    manualHost.appendChild(card);
+    confirmation.appendChild(document.createTextNode(item.confirmed ? "Confirmed" : "Confirm manually"));
+    row.appendChild(confirmation);
+    manualHost.appendChild(row);
   });
+  renderReviewCounts();
+}
 
+function renderReviewCounts() {
+  const rules = state.spec?.rules || [];
+  const manual = state.spec?.manual_review || [];
   const unresolved = manual.filter((item) => !item.confirmed).length;
-  const confirmed = manual.length - unresolved;
-  $("review-count").textContent =
-    `${state.spec.rules.length} requirement${state.spec.rules.length === 1 ? "" : "s"} extracted` +
-    ` · ${unresolved} manual unresolved` +
-    (confirmed ? ` · ${confirmed} manually confirmed` : "");
+  $("review-count").textContent = `${rules.length} rules · ${unresolved} human check${unresolved === 1 ? "" : "s"}`;
+  $("approve").innerHTML = `Approve ${rules.length} rules &amp; continue <span aria-hidden="true">→</span>`;
 }
 
-function appendField(dl, label, control) {
-  dl.appendChild(el("dt", null, label));
-  const dd = el("dd");
-  dd.appendChild(control);
-  dl.appendChild(dd);
-}
-
-function input(type, value, onChange) {
-  const node = document.createElement("input");
-  node.type = type;
-  node.value = value;
-  if (type === "number") node.step = "any";
-  node.addEventListener("input", () => onChange(node.value));
-  return node;
-}
-
+$("review-back").addEventListener("click", () => navigate("upload"));
 $("add-rule").addEventListener("click", () => {
-  const used = new Set(state.spec.rules.map((r) => r.id));
-  let n = 1;
-  while (used.has(`r${n}`)) n += 1;
+  const used = new Set(state.spec.rules.map((rule) => rule.id));
+  let number = 1;
+  while (used.has(`r${number}`)) number += 1;
   state.spec.rules.push({
-    id: `r${n}`,
+    id: `r${number}`,
     type: "MUST_SAY",
     label: "New requirement",
-    source_quote: "Added by hand during review.",
+    source_quote: "Added manually during approval.",
     severity: "error",
     needs_review: false,
     phrases: [""],
   });
+  markSpecDirty();
   renderReview();
+  window.setTimeout(() => document.querySelector(`[data-rule-id="r${number}"] summary`)?.focus(), 40);
 });
 
 $("approve").addEventListener("click", async () => {
   clearError();
+  const button = $("approve");
+  button.disabled = true;
+  button.textContent = "Approving specification…";
   try {
     const data = await call("/api/spec/approve", {
       method: "POST",
@@ -358,84 +700,118 @@ $("approve").addEventListener("click", async () => {
       body: JSON.stringify({ spec: state.spec }),
     });
     state.specId = data.spec_id;
-    markDone("review");
+    state.maxStep = Math.max(state.maxStep, 2);
+    $("approval-status").textContent = `${data.rules} rules approved`;
+    $("approved-rule-count").textContent = `${data.rules} approved rules`;
     renderTakes();
     show("processing");
-  } catch (err) {
-    fail(err.message);
+  } catch (error) {
+    fail(`${error.message}\nReview the highlighted requirement and try approval again.`);
+  } finally {
+    button.disabled = false;
+    renderReviewCounts();
   }
 });
 
-/* ------------------------------------------------------------ step 3 */
+/* ============================================================= Check */
+
+function setSelectedTake(takeId) {
+  state.lastTake = takeId;
+  $("take").value = takeId;
+  $("video-file").value = "";
+  $("video-file-name").textContent = "Real faster-whisper transcription";
+  document.querySelectorAll(".take-option").forEach((item) => {
+    const selected = item.dataset.takeId === takeId;
+    item.classList.toggle("is-selected", selected);
+    item.querySelector("input").checked = selected;
+  });
+  const selectedTake = state.takes.find((take) => take.id === takeId);
+  $("check-summary").textContent = selectedTake?.label || "Choose a take";
+  $("run-check").innerHTML = `Verify ${takeId ? takeId.toUpperCase() : "selected cut"} <span aria-hidden="true">→</span>`;
+  persistState();
+}
 
 function renderTakes() {
   const select = $("take");
-  const optionsHost = $("take-options");
+  const host = $("take-options");
   select.innerHTML = "";
-  optionsHost.innerHTML = "";
+  host.innerHTML = "";
+
   if (!state.takes.length) {
-    const opt = el("option", null, "No committed takes found");
-    opt.value = "";
-    select.appendChild(opt);
-    optionsHost.appendChild(el("p", "muted", "No committed takes for a custom brief. Upload your recording instead."));
+    const option = el("option", null, "Upload your media");
+    option.value = "";
+    select.appendChild(option);
+    host.appendChild(el("p", "take-empty", "This custom brief has no committed sample takes. Upload the sponsor cut below."));
+    state.lastTake = "";
+    $("check-summary").textContent = "No media selected";
     return;
   }
-  state.takes.forEach((t, index) => {
-    const opt = el("option", null, t.label);
-    opt.value = t.id;
-    select.appendChild(opt);
 
-    const label = el("label", "take-option");
-    if (index === 0) label.classList.add("is-selected");
+  if (!state.takes.some((take) => take.id === state.lastTake)) state.lastTake = state.takes[0].id;
+  state.takes.forEach((take) => {
+    const option = el("option", null, take.label);
+    option.value = take.id;
+    option.selected = take.id === state.lastTake;
+    select.appendChild(option);
+
+    const card = el("label", "take-option");
+    card.dataset.takeId = take.id;
+    card.classList.toggle("is-selected", take.id === state.lastTake);
     const radio = document.createElement("input");
     radio.type = "radio";
     radio.name = "take-card";
-    radio.value = t.id;
-    radio.checked = index === 0;
-    radio.addEventListener("change", () => {
-      select.value = t.id;
-      optionsHost.querySelectorAll(".take-option").forEach((item) =>
-        item.classList.toggle("is-selected", item === label)
-      );
-    });
-    label.appendChild(radio);
-    label.appendChild(el("span", "take-index", t.id.toUpperCase()));
+    radio.value = take.id;
+    radio.checked = take.id === state.lastTake;
+    radio.addEventListener("change", () => setSelectedTake(take.id));
+    card.appendChild(radio);
+    card.appendChild(el("span", "take-index", take.id.toUpperCase()));
     const copy = el("span", "take-copy");
-    copy.appendChild(el("strong", null, t.label));
-    copy.appendChild(el(
-      "small",
-      null,
-      t.id === "v1" ? "Known failing original" : "Corrected automated take"
-    ));
-    label.appendChild(copy);
-    label.appendChild(el("span", "take-state", t.id === "v1" ? "4/7" : "7/7"));
-    optionsHost.appendChild(label);
+    copy.appendChild(el("strong", null, take.id === "v1" ? "Original cut" : "Corrected cut"));
+    copy.appendChild(el("small", null, take.id === "v1" ? "Baseline Aegis VPN sponsor read" : "Revised read after SponsorLint findings"));
+    card.appendChild(copy);
+    card.appendChild(el("span", "take-state", take.id === "v1" ? "First pass" : "Revision"));
+    host.appendChild(card);
   });
+  setSelectedTake(state.lastTake);
 }
 
-function steps(items) {
+function renderSteps(items) {
   const host = $("steps");
   host.innerHTML = "";
   items.forEach((item) => {
-    const li = el("li");
-    li.dataset.state = item.state;
-    const glyph = { done: "✓", active: "◐", pending: "·" }[item.state];
-    li.appendChild(el("span", "glyph", glyph));
-    li.appendChild(document.createTextNode(item.text));
-    host.appendChild(li);
+    const row = el("li");
+    row.dataset.state = item.state;
+    row.appendChild(el("span", "glyph", { done: "✓", active: "◐", pending: "·" }[item.state]));
+    row.appendChild(document.createTextNode(item.text));
+    host.appendChild(row);
   });
   $("progress-panel").hidden = false;
 }
 
-$("back-to-review").addEventListener("click", () => show("review"));
+$("back-to-review").addEventListener("click", () => navigate("review"));
+
+$("video-file").addEventListener("change", () => {
+  const file = $("video-file").files[0];
+  $("video-file-name").textContent = file?.name || "Real faster-whisper transcription";
+  if (file) {
+    state.lastTake = "";
+    document.querySelectorAll(".take-option").forEach((item) => item.classList.remove("is-selected"));
+    $("check-summary").textContent = file.name;
+    $("run-check").innerHTML = 'Transcribe &amp; verify upload <span aria-hidden="true">→</span>';
+    persistState();
+  }
+});
 
 $("run-check").addEventListener("click", async () => {
   clearError();
   const video = $("video-file").files[0];
-  const take = $("take").value;
-
+  const take = state.lastTake || $("take").value;
   if (!video && !take) {
-    fail("Choose a committed take or upload a video file.");
+    fail("Choose V1, V3, or upload a sponsor cut before running verification.");
+    return;
+  }
+  if (!state.specId) {
+    fail("The specification needs approval again. Return to Review and approve the current rules.");
     return;
   }
 
@@ -444,146 +820,203 @@ $("run-check").addEventListener("click", async () => {
   if (video) form.append("video", video);
   else form.append("take", take);
 
-  steps([
-    { state: "done", text: `Approved ${state.spec.rules.length} requirements` },
-    {
-      state: "active",
-      text: video ? "Transcribing sponsor segment…" : "Loading cached transcript",
-    },
-    { state: "pending", text: "Running checks" },
+  $("run-state-title").textContent = video ? "Transcribing sponsor cut" : "Verifying committed take";
+  renderSteps([
+    { state: "done", text: `${state.spec.rules.length} approved requirements loaded` },
+    { state: "active", text: video ? "Uploading and transcribing real media" : "Loading committed raw transcript" },
+    { state: "pending", text: "Building the evidence report" },
   ]);
-
+  const stopIndicator = animateResolveIndicator();
   const button = $("run-check");
   button.disabled = true;
+  button.textContent = "Verification running…";
+
   try {
     const data = await call("/api/verify", { method: "POST", body: form });
-    steps([
-      { state: "done", text: `Approved ${state.spec.rules.length} requirements` },
-      { state: "done", text: video ? "Transcribed sponsor segment" : "Loaded cached transcript" },
-      { state: "done", text: "Ran checks" },
+    renderSteps([
+      { state: "done", text: `${state.spec.rules.length} approved requirements loaded` },
+      { state: "done", text: video ? "Media transcribed with faster-whisper" : "Committed transcript loaded" },
+      { state: "done", text: "Evidence report built deterministically" },
     ]);
-    markDone("processing");
+    state.lastTake = video ? "upload" : take;
+    state.lastReport = data.report;
+    state.maxStep = 3;
     renderReport(data.report);
     show("report");
-  } catch (err) {
+  } catch (error) {
     $("progress-panel").hidden = true;
-    fail(err.message);
+    fail(`${error.message}\nYour selection and approved rules are preserved. Fix the issue and retry.`);
   } finally {
+    stopIndicator();
     button.disabled = false;
+    button.innerHTML = 'Verify selected cut <span aria-hidden="true">→</span>';
   }
 });
 
-/* ------------------------------------------------------------ step 4 */
+/* ============================================================= Report */
+
+function scoreWithPadding(score) {
+  return score.split("/").map((part) => part.padStart(2, "0")).join("/");
+}
 
 function renderReport(report) {
+  if (!report) return;
+  $("report-context").textContent = state.lastTake === "upload" ? "Uploaded sponsor cut" : `${String(state.lastTake).toUpperCase()} / Aegis VPN sample`;
   const verdict = $("verdict");
   verdict.innerHTML = "";
-  const banner = el("div", `verdict verdict--${report.state_class}`);
-  const body = el("div", "verdict-main");
+  const banner = el("section", `verdict verdict--${report.state_class}`);
+  const main = el("div", "verdict-main");
   const kicker = el("div", "verdict-kicker");
   kicker.appendChild(el("span", "icon", report.icon));
-  kicker.appendChild(document.createTextNode(
-    report.status === "DO_NOT_SEND" ? "Automated blocking verdict" : "Readiness verdict"
-  ));
-  body.appendChild(kicker);
-  body.appendChild(el("h2", null, report.label));
-  body.appendChild(el("p", null, report.subline));
-  banner.appendChild(body);
+  kicker.appendChild(document.createTextNode(report.status === "DO_NOT_SEND" ? "Blocking send decision" : "Sponsor readiness decision"));
+  main.appendChild(kicker);
+  main.appendChild(el("h2", null, report.label));
+  main.appendChild(el("p", null, report.subline));
+  banner.appendChild(main);
 
   const stats = el("div", "verdict-stats");
-  const score = report.score.split("/").map((part) => part.padStart(2, "0")).join("/");
-  const scoreStat = el("div", "verdict-stat");
-  scoreStat.appendChild(el("strong", null, score));
-  scoreStat.appendChild(el("span", null, "Automated pass count"));
-  stats.appendChild(scoreStat);
-  const gateStat = el("div", "verdict-stat");
+  const score = el("div", "verdict-stat");
+  score.appendChild(el("strong", null, scoreWithPadding(report.score)));
+  score.appendChild(el("span", null, "Automated rules passed"));
+  stats.appendChild(score);
+  const gate = el("div", "verdict-stat");
+  const blockers = Number(report.summary.fail || 0) + Number(report.summary.warn || 0);
   const manualOpen = Number(report.summary.manual_review || 0);
-  const blocking = Number(report.summary.fail || 0) + Number(report.summary.warn || 0);
-  gateStat.appendChild(el("strong", null, String(blocking || manualOpen)));
-  gateStat.appendChild(el("span", null, blocking ? "Blocking findings" : "Human check open"));
-  stats.appendChild(gateStat);
+  gate.appendChild(el("strong", null, String(blockers || manualOpen)));
+  gate.appendChild(el("span", null, blockers ? "Blocking findings" : manualOpen ? "Human check remaining" : "Open requirements"));
+  stats.appendChild(gate);
   banner.appendChild(stats);
   verdict.appendChild(banner);
 
   const host = $("findings");
   host.innerHTML = "";
-
-  const failures = report.results.filter((r) => r.status === "FAIL" || r.status === "WARN");
-  const manualResults = report.results.filter((r) => r.status === "MANUAL_REVIEW");
-  const passes = report.results.filter((r) => r.status === "PASS");
+  const failures = report.results.filter((result) => ["FAIL", "WARN"].includes(result.status));
+  const passes = report.results.filter((result) => result.status === "PASS");
 
   if (failures.length) {
     const heading = el("div", "findings-heading");
-    heading.appendChild(el("h3", null, "Blocking findings"));
-    heading.appendChild(el("span", null, `${failures.length} require attention`));
+    heading.appendChild(el("h3", null, "Fix these before sending"));
+    heading.appendChild(el("span", null, `${failures.length} blocker${failures.length === 1 ? "" : "s"} · strongest evidence first`));
     host.appendChild(heading);
+    failures.forEach((result) => host.appendChild(resultCard(result)));
   }
-  failures.forEach((r) => host.appendChild(resultCard(r)));
 
-  if (manualResults.length || report.manual_review.length) {
+  if (report.manual_review.length) {
     host.appendChild(el("p", "section-label", "◇ Human check · never automated"));
-    manualResults.forEach((r) => host.appendChild(resultCard(r)));
-    report.manual_review.forEach((item) => {
-      const card = el("div", "result result--manual");
-      const head = el("div", "result-head");
-      head.appendChild(
-        el("span", `chip chip--${item.confirmed ? "pass" : "manual"}`,
-          item.confirmed ? "✓ HUMAN CONFIRMED" : "◇ HUMAN CHECK")
-      );
-      head.appendChild(el("h3", null, item.reason));
-      card.appendChild(head);
-      card.appendChild(el("div", "evidence", `"${item.source_quote}"`));
-      card.appendChild(el(
-        "p",
-        "advisory",
-        item.confirmed
-          ? "Confirmed by the creator during spec review."
-          : "SponsorLint does not verify this. Confirm it yourself before sending."
-      ));
-      manualHostAppend(card, host);
-    });
+    report.manual_review.forEach((item, index) => host.appendChild(manualReportCard(item, index)));
   }
 
   if (passes.length) {
     const details = el("details", "passes");
-    details.appendChild(el("summary", null, `${String(passes.length).padStart(2, "0")} passing automated requirements`));
-    passes.forEach((r) => details.appendChild(resultCard(r)));
+    const summary = el("summary");
+    summary.appendChild(document.createTextNode(`${String(passes.length).padStart(2, "0")} automated checks passed`));
+    summary.appendChild(el("span", null, "+"));
+    details.appendChild(summary);
+    const list = el("ul", "pass-list");
+    passes.forEach((result) => {
+      const row = el("li", "pass-row");
+      row.appendChild(el("span", null, "✓"));
+      row.appendChild(el("strong", null, result.title));
+      row.appendChild(el("small", null, result.timecode || result.detected || "clear"));
+      list.appendChild(row);
+    });
+    details.appendChild(list);
     host.appendChild(details);
   }
 }
 
-function manualHostAppend(card, host) {
-  host.appendChild(card);
-}
-
-function resultCard(r) {
-  const card = el("div", `result result--${r.chip}`);
-
+function resultCard(result) {
+  const card = el("article", `result result--${result.chip}`);
+  card.appendChild(el("p", "finding-code", `${String(result.rule_id).toUpperCase()} / ${String(result.rule_type).replaceAll("_", " ")}`));
   const head = el("div", "result-head");
-  head.appendChild(el("span", `chip chip--${r.chip}`, r.word));
-  head.appendChild(el("h3", null, r.title));
-  if (r.timecode) head.appendChild(timecodeButton(r.timecode));
+  head.appendChild(el("span", "status-word", result.word));
+  head.appendChild(el("h3", null, result.title));
+  if (result.timecode) head.appendChild(timecodeButton(result.timecode));
   card.appendChild(head);
 
-  const dl = el("dl", "rule-fields");
-  if (r.expected) appendField(dl, "expected", el("span", null, r.expected));
-  if (r.detected) appendField(dl, "detected", el("span", null, r.detected));
-  if (dl.children.length) card.appendChild(dl);
-
-  if (r.evidence_html) {
-    const evidence = el("div", "evidence");
-    evidence.innerHTML = `"${r.evidence_html}"`;
-    card.appendChild(evidence);
+  if (result.expected || result.detected) {
+    const comparison = el("div", "comparison");
+    if (result.expected) {
+      const expected = el("div");
+      expected.appendChild(el("span", null, "Expected"));
+      expected.appendChild(el("strong", null, result.expected));
+      comparison.appendChild(expected);
+    }
+    if (result.detected) {
+      const detected = el("div", "detected-bad");
+      detected.appendChild(el("span", null, "Detected"));
+      detected.appendChild(el("strong", null, result.detected));
+      comparison.appendChild(detected);
+    }
+    card.appendChild(comparison);
   }
 
-  if (r.advisory) card.appendChild(el("p", "advisory", r.advisory));
+  if (result.evidence_html) {
+    const quote = el("blockquote", "evidence-quote");
+    quote.innerHTML = `“${result.evidence_html}”`;
+    card.appendChild(quote);
+  }
+  if (result.advisory) card.appendChild(el("p", "advisory", result.advisory));
 
-  const from = el("dl", "from-brief");
-  from.appendChild(el("dt", null, "From the brief"));
-  from.appendChild(el("dd", null, `"${r.source_quote}"`));
-  card.appendChild(from);
-
+  const source = el("dl", "source-grounding");
+  source.appendChild(el("dt", null, "Source / brief"));
+  source.appendChild(el("dd", null, `“${result.source_quote}”`));
+  card.appendChild(source);
   return card;
+}
+
+function manualReportCard(item, index) {
+  const card = el("article", "result result--manual");
+  card.appendChild(el("p", "finding-code", "◇ HUMAN CHECK / VISUAL"));
+  const head = el("div", "result-head");
+  head.appendChild(el("span", "status-word", item.confirmed ? "CONFIRMED" : "REVIEW"));
+  head.appendChild(el("h3", null, item.reason));
+  card.appendChild(head);
+  const quote = el("blockquote", "evidence-quote", `“${item.source_quote}”`);
+  card.appendChild(quote);
+  card.appendChild(el("p", "advisory", item.confirmed
+    ? "Confirmed by a human during this campaign session."
+    : "SponsorLint cannot verify this from the audio transcript or duration."));
+
+  if (!item.confirmed) {
+    const action = el("div", "manual-confirm-report");
+    action.appendChild(el("p", null, "Inspect the actual video first. Confirmation changes the readiness verdict."));
+    const button = el("button", "button button--primary", "Confirm manually");
+    button.type = "button";
+    button.addEventListener("click", () => confirmManualFromReport(index, button));
+    action.appendChild(button);
+    card.appendChild(action);
+  }
+  return card;
+}
+
+async function confirmManualFromReport(index, button) {
+  clearError();
+  if (!state.spec?.manual_review?.[index]) return;
+  const previous = Boolean(state.spec.manual_review[index].confirmed);
+  state.spec.manual_review[index].confirmed = true;
+  button.disabled = true;
+  button.textContent = "Confirming and rechecking…";
+  try {
+    const approval = await call("/api/spec/approve", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ spec: state.spec }),
+    });
+    state.specId = approval.spec_id;
+    const form = new FormData();
+    form.append("spec_id", state.specId);
+    form.append("take", state.lastTake);
+    const data = await call("/api/verify", { method: "POST", body: form });
+    state.lastReport = data.report;
+    renderReport(data.report);
+    persistState();
+    $("report-title").focus({ preventScroll: true });
+  } catch (error) {
+    state.spec.manual_review[index].confirmed = previous;
+    fail(`${error.message}\nThe manual confirmation was not saved. Retry when the verifier is available.`);
+    renderReport(state.lastReport);
+  }
 }
 
 function timecodeButton(timecode) {
@@ -594,13 +1027,95 @@ function timecodeButton(timecode) {
     try {
       await navigator.clipboard.writeText(timecode);
       button.textContent = "copied";
-      setTimeout(() => (button.textContent = timecode), 900);
+      window.setTimeout(() => (button.textContent = timecode), 900);
     } catch (_) {
-      /* clipboard unavailable — the timecode is still readable */
+      /* The timecode remains visible when clipboard access is unavailable. */
     }
   });
   return button;
 }
 
-$("recheck").addEventListener("click", () => show("review"));
-$("start-over").addEventListener("click", () => window.location.reload());
+$("report-back").addEventListener("click", () => navigate("processing"));
+$("check-another").addEventListener("click", () => navigate("processing"));
+$("recheck").addEventListener("click", () => navigate("review"));
+
+/* ============================================================= shell UX */
+
+document.querySelectorAll("[data-nav-step]").forEach((button) => {
+  button.addEventListener("click", () => navigate(button.dataset.navStep));
+});
+
+document.querySelector(".brand").addEventListener("click", (event) => {
+  event.preventDefault();
+  navigate("upload");
+});
+
+window.addEventListener("popstate", (event) => {
+  const requested = event.state?.step || HASH_STEP[location.hash.slice(1)] || "upload";
+  if (!show(requested, { historyMode: "none" })) show(state.current, { historyMode: "replace", focus: false });
+});
+
+const resetDialog = $("reset-dialog");
+$("reset-global").addEventListener("click", () => resetDialog.showModal());
+$("confirm-reset").addEventListener("click", (event) => {
+  event.preventDefault();
+  sessionStorage.removeItem(SESSION_KEY);
+  resetDialog.close();
+  window.location.replace(`${location.pathname}#brief`);
+  window.location.reload();
+});
+
+function setupDropZone(zoneId, inputId) {
+  const zone = $(zoneId);
+  const input = $(inputId);
+  ["dragenter", "dragover"].forEach((eventName) => {
+    zone.addEventListener(eventName, (event) => {
+      event.preventDefault();
+      zone.classList.add("is-dragging");
+    });
+  });
+  ["dragleave", "drop"].forEach((eventName) => {
+    zone.addEventListener(eventName, (event) => {
+      event.preventDefault();
+      zone.classList.remove("is-dragging");
+    });
+  });
+  zone.addEventListener("drop", (event) => {
+    if (!event.dataTransfer?.files?.length) return;
+    input.files = event.dataTransfer.files;
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+}
+
+$("brief-file").addEventListener("change", () => {
+  const file = $("brief-file").files[0];
+  $("brief-file-name").textContent = file?.name || "or choose PDF, MD, or TXT · up to 10 MiB";
+});
+setupDropZone("brief-drop-zone", "brief-file");
+setupDropZone("video-drop-zone", "video-file");
+
+/* ============================================================= bootstrap */
+
+restoreState();
+runTyper();
+initGlyphField();
+
+if (state.customBriefOpen) {
+  $("custom-brief-panel").hidden = false;
+  $("show-custom-brief").setAttribute("aria-expanded", "true");
+}
+if (state.spec) renderReview();
+if (state.specId) renderTakes();
+if (state.lastReport) renderReport(state.lastReport);
+
+const requestedStep = HASH_STEP[location.hash.slice(1)] || state.current || "upload";
+const initialStep = canAccess(requestedStep) ? requestedStep : canAccess(state.current) ? state.current : "upload";
+show(initialStep, { historyMode: "replace", focus: false });
+
+if (window.location.protocol === "file:") {
+  const notice = $("error");
+  notice.className = "notice notice--info";
+  notice.textContent = "Static preview only. Run `python -m sponsorlint serve`, then open http://127.0.0.1:8000 for the working campaign flow.";
+  notice.hidden = false;
+  ["load-sample", "compile", "run-check", "approve"].forEach((id) => ($(id).disabled = true));
+}

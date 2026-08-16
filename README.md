@@ -93,14 +93,14 @@ Open http://127.0.0.1:8000, click **Load sample campaign**, and walk the four sc
 
 ## Does it actually work?
 
-`python -m sponsorlint eval` runs every validator over 39 hand-labeled text fixtures, most of them
+`python -m sponsorlint eval` runs every validator over 46 hand-labeled text fixtures, most of them
 deliberate hard negatives, and prints what actually happened:
 
 ```
-Fixtures:           39
-Correct:            38
+Fixtures:           46
+Correct:            45
 Incorrect:           1
-Accuracy:        97.4%
+Accuracy:        97.8%
 
 False FAILs:         1     (reported FAIL, requirement was satisfied)
 False PASSes:        0     (reported PASS, requirement was violated)
@@ -129,7 +129,7 @@ assertions the unit tests use — written once, used twice.
 
 ```bash
 python -m sponsorlint eval --verbose   # every case, pass or miss
-python -m pytest tests -q              # 129 passed, 1 intentional xfail
+python -m pytest tests -q              # 201 passed, 1 intentional xfail
 ```
 
 ---
@@ -255,7 +255,11 @@ Written by us, not discovered by you.
   for real. Once the takes are recorded, `python -m sponsorlint transcribe` regenerates them and
   nothing else changes — the verdict is computed from whatever the transcript says. See
   [`samples/README.md`](samples/README.md).
-- **In-memory session store.** No database, no accounts. Restarting the server clears state.
+- **Local, in-memory session store.** No database, accounts, or per-user isolation. Specs and reports
+  use unguessable IDs and the oldest entries are evicted, but this server should not be exposed to
+  an untrusted network. Restarting it clears state.
+- **Uploads are temporary, not durable storage.** Normal completion and handled failures delete the
+  temporary file; a hard process or machine crash can leave an orphan in `uploads/`.
 
 ---
 
@@ -307,7 +311,7 @@ sponsorlint/
 ├── report/              ANSI terminal · web template context
 └── web/                 FastAPI + Jinja2 + vanilla JS, no build step
 samples/                 the committed Aegis VPN campaign
-tests/                   130 collected tests
+tests/                   202 collected tests
 ```
 
 The brand, campaign, URL and promo code used by the project are fictional.

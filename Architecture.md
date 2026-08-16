@@ -165,7 +165,7 @@ sponsorlint/
 │   │
 │   ├── eval/
 │   │   ├── runner.py
-│   │   └── fixtures.json     39 labeled cases
+│   │   └── fixtures.json     46 labeled cases
 │   │
 │   └── web/
 │       ├── app.py            FastAPI routes
@@ -603,7 +603,7 @@ GET  /api/sample              load the committed demo campaign
 
 # 7. Eval harness
 
-**39 pure-text fixtures. No video. No Whisper. No API calls. Runs in under a second.**
+**46 pure-text fixtures. No video. No Whisper. No API calls. Runs in under a second.**
 
 Fixtures are `(rule, transcript_snippet, expected_verdict)` tuples in `sponsorlint/eval/fixtures.json`. They are the same assertions as the unit tests — **write each one once, use it twice.**
 
@@ -646,14 +646,14 @@ Use `False FAIL` and `False PASS` in output, in the README, and in conversation.
 ```text
 SponsorLint Validator Evaluation
 --------------------------------
-Fixtures:          28
-Correct:           27
+Fixtures:          46
+Correct:           45
 Incorrect:          1
-Accuracy:        96.4%
+Accuracy:        97.8%
 
-False FAILs:        0     (reported FAIL, requirement was satisfied)
-False PASSes:       1     (reported PASS, requirement was violated)
-Manual Review:      3
+False FAILs:        1     (reported FAIL, requirement was satisfied)
+False PASSes:       0     (reported PASS, requirement was violated)
+Manual Review:      1
 ```
 
 **Do not fabricate perfection.** Publish whatever the real number is.

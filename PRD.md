@@ -158,7 +158,7 @@ Requirements that cannot be verified from audio or duration are surfaced as `MAN
 Every finding answers five questions: **what was required · what was detected · where · what evidence · where did the requirement come from.**
 
 ### F7 · Eval harness
-`python -m sponsorlint eval` runs the validators over 39 labeled text fixtures and reports real accuracy, false FAILs, and false PASSes. **This is a required feature, not a stretch goal.**
+`python -m sponsorlint eval` runs the validators over 46 labeled text fixtures and reports real accuracy, false FAILs, and false PASSes. **This is a required feature, not a stretch goal.**
 
 ### F8 · Zero-key demo
 `python -m sponsorlint demo` runs the real verifier against committed fixtures with no API key, no network, and no model download.

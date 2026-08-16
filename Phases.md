@@ -123,7 +123,7 @@ Per validator: write the failing test → implement → pass → run on V1 → m
 
 - Spoken numbers, currency, percent (`normalize/numbers.py`)
 - URLs (`normalize/urls.py`), promo codes (`normalize/codes.py`)
-- 39 fixtures in `eval/fixtures.json`, heavy on hard negatives
+- 46 fixtures in `eval/fixtures.json`, heavy on hard negatives
 - `python -m sponsorlint eval` printing real metrics
 - Tune to avoid false FAILs; route ambiguity to `MANUAL REVIEW`
 

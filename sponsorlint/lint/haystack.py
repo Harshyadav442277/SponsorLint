@@ -22,6 +22,7 @@ import re
 from dataclasses import dataclass
 
 from rapidfuzz import fuzz
+from rapidfuzz.distance import DamerauLevenshtein
 
 from ..models import Transcript
 from ..normalize import canonicalize, normalize_text
@@ -161,7 +162,9 @@ class Haystack:
         pattern = re.compile(rf"(?<![a-z0-9]){re.escape(needle)}(?![a-z0-9])")
         return self.search_all(pattern, view=view)
 
-    def best_fuzzy(self, needle: str) -> tuple[float, Hit | None]:
+    def best_fuzzy(
+        self, needle: str, *, allow_truncation: bool = False
+    ) -> tuple[float, Hit | None]:
         """`fuzz.partial_ratio` against the joined transcript.
 
         Never `fuzz.ratio` (whole-string; scores true matches 10-67, so nothing
@@ -175,7 +178,55 @@ class Haystack:
         if alignment is None:
             return 0.0, None
 
-        window = self.numeric[alignment.dest_start : alignment.dest_end]
-        return float(alignment.score), self._hit(
-            alignment.dest_start, window, self._numeric_spans
-        )
+        # Score complete token windows instead of accepting partial_ratio's
+        # single global alignment. This avoids a bad prefix hit masking a later
+        # valid Whisper typo in the same transcript.
+        token_count = len(re.findall(r"[a-z0-9]+", needle))
+        tokens = list(re.finditer(r"[a-z0-9]+", self.numeric))
+        best_score = 0.0
+        best_hit = None
+        for index in range(0, len(tokens) - token_count + 1):
+            group = tokens[index : index + token_count]
+            start, end = group[0].start(), group[-1].end()
+            window = self.numeric[start:end]
+            if not _tokens_are_transcription_neighbours(
+                needle, window, allow_truncation=allow_truncation
+            ):
+                continue
+            score = float(fuzz.partial_ratio(needle, window))
+            if score > best_score:
+                best_score = score
+                best_hit = self._hit(start, window, self._numeric_spans)
+
+        if best_hit is not None:
+            return best_score, best_hit
+        return float(alignment.score), None
+
+
+def _tokens_are_transcription_neighbours(
+    needle: str, window: str, *, allow_truncation: bool
+) -> bool:
+    expected = re.findall(r"[a-z0-9]+", needle)
+    detected = re.findall(r"[a-z0-9]+", window)
+    if len(expected) != len(detected):
+        return False
+
+    for left, right in zip(expected, detected):
+        if left == right:
+            continue
+        if min(len(left), len(right)) < 4:
+            return False
+        if DamerauLevenshtein.distance(left, right) != 1:
+            return False
+        if len(left) == len(right):
+            # Preserve an adjacent transposition such as shield -> sheild,
+            # while rejecting same-length substitutions such as mode -> node.
+            if sorted(left) != sorted(right):
+                return False
+            continue
+        # A missing final character is useful only when routing a prohibited
+        # near-match to MANUAL_REVIEW. Required mentions never get this looser
+        # treatment, and added suffixes are always rejected.
+        if not allow_truncation or len(right) != len(left) - 1:
+            return False
+    return True

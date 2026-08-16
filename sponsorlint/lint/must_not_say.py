@@ -42,7 +42,7 @@ def check(rule: Rule, tx: Transcript) -> Result:
         needle = canonicalize(phrase)
         if len(needle) < FUZZY_MIN_CHARS:
             continue
-        score, hit = hay.best_fuzzy(needle)
+        score, hit = hay.best_fuzzy(needle, allow_truncation=True)
         if score >= FUZZY_THRESHOLD and hit is not None:
             return result(
                 rule,

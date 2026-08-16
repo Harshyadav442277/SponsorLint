@@ -75,3 +75,42 @@ def test_campaign_url_and_closing_cta_are_distinct_checks():
     assert campaign_url.status == "PASS"
     assert closing_cta.status == "FAIL"
     assert closing_cta.timestamp == 20.0
+
+
+def test_invalid_prefix_does_not_mask_a_later_valid_whisper_typo():
+    result = check_rule(
+        Rule.model_validate({
+            "id": "f",
+            "type": "MUST_SAY",
+            "label": "Feature mention",
+            "source_quote": "Mention Shield Mode.",
+            "phrases": ["Shield Mode"],
+        }),
+        Transcript.model_validate({
+            "duration_seconds": 20,
+            "segments": [{
+                "start": 4,
+                "end": 12,
+                "text": "The shield model changed; now try Sheild Mode.",
+            }],
+        }),
+    )
+    assert result.status == "PASS"
+    assert result.detected == "sheild mode"
+
+
+def test_same_length_substitution_is_not_a_required_mention():
+    result = check_rule(
+        Rule.model_validate({
+            "id": "f",
+            "type": "MUST_SAY",
+            "label": "Feature mention",
+            "source_quote": "Mention Shield Mode.",
+            "phrases": ["Shield Mode"],
+        }),
+        Transcript.model_validate({
+            "duration_seconds": 10,
+            "segments": [{"start": 1, "end": 4, "text": "Try Shield Node."}],
+        }),
+    )
+    assert result.status == "FAIL"

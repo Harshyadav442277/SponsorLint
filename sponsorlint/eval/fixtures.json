@@ -36,6 +36,27 @@
       "transcript": {"duration_seconds": 75.0, "segments": [{"start": 4.0, "end": 7.0, "text": "It is a very private network for your traffic."}]},
       "expected": "FAIL"
     },
+    {
+      "id": "must_say/hard-negative-prefix-model",
+      "note": "HARD NEGATIVE. partial_ratio finds the exact prefix 'shield mode' inside 'shield model'; a fuzzy hit must end on a whole-token boundary.",
+      "rule": {"id": "f", "type": "MUST_SAY", "label": "Feature mention", "source_quote": "Please mention Shield Mode by name at least once.", "phrases": ["Shield Mode"]},
+      "transcript": {"duration_seconds": 75.0, "segments": [{"start": 12.0, "end": 15.0, "text": "Try the Shield Model today."}]},
+      "expected": "FAIL"
+    },
+    {
+      "id": "must_say/hard-negative-plural-modes",
+      "note": "HARD NEGATIVE. The exact product name is singular; partial_ratio must not stop inside the plural token.",
+      "rule": {"id": "f", "type": "MUST_SAY", "label": "Feature mention", "source_quote": "Please mention Shield Mode by name at least once.", "phrases": ["Shield Mode"]},
+      "transcript": {"duration_seconds": 75.0, "segments": [{"start": 12.0, "end": 15.0, "text": "Try the Shield Modes today."}]},
+      "expected": "FAIL"
+    },
+    {
+      "id": "must_say/hard-negative-near-word-mood",
+      "note": "HARD NEGATIVE. 'mood' is a different whole word, despite partial_ratio scoring it 95.2 against 'mode'.",
+      "rule": {"id": "f", "type": "MUST_SAY", "label": "Feature mention", "source_quote": "Please mention Shield Mode by name at least once.", "phrases": ["Shield Mode"]},
+      "transcript": {"duration_seconds": 75.0, "segments": [{"start": 12.0, "end": 15.0, "text": "Try the Shield Mood today."}]},
+      "expected": "FAIL"
+    },
 
     {
       "id": "must_not_say/violation",

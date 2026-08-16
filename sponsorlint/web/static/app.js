@@ -132,8 +132,12 @@ function fieldsFor(rule) {
     case "MUST_NOT_SAY":
       return [{ key: "phrases", label: "phrases", kind: "lines" }];
     case "EXACT_VALUE":
-    case "URL_OR_CTA":
       return [{ key: "expected", label: "expected", kind: "text" }];
+    case "URL_OR_CTA":
+      return [
+        { key: "expected", label: "expected", kind: "text" },
+        { key: "within_last_seconds", label: "within_last_seconds", kind: "number" },
+      ];
     case "DURATION":
       return [
         { key: "min_seconds", label: "min_seconds", kind: "number" },

@@ -125,6 +125,26 @@ class Haystack:
                 return self._hit(match.start(), match.group(0), spans)
         return None
 
+    def search_all_any_view(self, pattern: re.Pattern[str]) -> list[Hit]:
+        """Return exact hits from both views, deduplicated by segment/time/text."""
+        hits: list[Hit] = []
+        seen: set[tuple[int, float, str]] = set()
+        for _name, text, spans in self._views():
+            for match in pattern.finditer(text):
+                hit = self._hit(match.start(), match.group(0), spans)
+                if hit is None:
+                    continue
+                key = (hit.segment_index, hit.start, hit.matched)
+                if key not in seen:
+                    seen.add(key)
+                    hits.append(hit)
+        return hits
+
+    def hit_at(self, offset: int, matched: str, view: str = "numeric") -> Hit | None:
+        """Resolve a known match offset back to its transcript segment."""
+        spans = self._numeric_spans if view == "numeric" else self._plain_spans
+        return self._hit(offset, matched, spans)
+
     def contains(self, needle: str, view: str = "numeric") -> Hit | None:
         """Normalized exact containment, guarded by word boundaries.
 
@@ -134,6 +154,12 @@ class Haystack:
             return None
         pattern = re.compile(rf"(?<![a-z0-9]){re.escape(needle)}(?![a-z0-9])")
         return self.search(pattern, view=view)
+
+    def contains_all(self, needle: str, view: str = "numeric") -> list[Hit]:
+        if not needle:
+            return []
+        pattern = re.compile(rf"(?<![a-z0-9]){re.escape(needle)}(?![a-z0-9])")
+        return self.search_all(pattern, view=view)
 
     def best_fuzzy(self, needle: str) -> tuple[float, Hit | None]:
         """`fuzz.partial_ratio` against the joined transcript.

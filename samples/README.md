@@ -38,3 +38,7 @@ The committed demo campaign. These files are what `python -m sponsorlint demo` r
 `within_first_seconds: 15` in `spec.approved.json` is **user-authored**. The brief says
 "near the beginning" and gives no number; SponsorLint never invents one
 (`Architecture.md` §5.4).
+
+`within_last_seconds: 15` makes the closing CTA a distinct placement check. The approved sample
+also records `confirmed: true` for the five-second interface requirement; that is a human assertion,
+not a claim that the audio verifier checked the screen. Clear it to see V3 resolve to `REVIEW`.

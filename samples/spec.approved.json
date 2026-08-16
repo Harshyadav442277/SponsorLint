@@ -63,7 +63,8 @@
       "source_quote": "The closing should include a direct call to action telling viewers to visit the campaign URL.",
       "severity": "error",
       "needs_review": false,
-      "expected": "aegisvpn.com/alex"
+      "expected": "aegisvpn.com/alex",
+      "within_last_seconds": 15
     }
   ],
   "manual_review": [

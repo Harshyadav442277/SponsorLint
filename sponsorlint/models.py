@@ -85,6 +85,7 @@ class Rule(BaseModel):
     min_seconds: float | None = None  # DURATION
     max_seconds: float | None = None  # DURATION
     within_first_seconds: float | None = None  # MUST_DISCLOSE placement
+    within_last_seconds: float | None = None  # URL_OR_CTA closing placement
 
     @field_validator("source_quote")
     @classmethod
@@ -122,6 +123,9 @@ class Rule(BaseModel):
             if not self.expected or not self.expected.strip():
                 raise ValueError(f"{t} requires `expected`")
             object.__setattr__(self, "expected", self.expected.strip())
+            if t == "URL_OR_CTA" and self.within_last_seconds is not None:
+                if self.within_last_seconds <= 0:
+                    raise ValueError("`within_last_seconds` must be positive")
 
         elif t == "DURATION":
             if self.min_seconds is None and self.max_seconds is None:
@@ -138,6 +142,9 @@ class Rule(BaseModel):
             # state placement at all (Architecture.md §5.4).
             if self.within_first_seconds is not None and self.within_first_seconds <= 0:
                 raise ValueError("`within_first_seconds` must be positive")
+
+        if self.within_last_seconds is not None and t != "URL_OR_CTA":
+            raise ValueError("`within_last_seconds` is only valid for URL_OR_CTA")
 
         return self
 

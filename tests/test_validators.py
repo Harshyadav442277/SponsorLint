@@ -51,3 +51,27 @@ def test_fixture_count_is_in_range():
 def test_every_fixture_rule_carries_a_source_quote():
     for case in CASES:
         assert case["rule"].get("source_quote", "").strip()
+
+
+def test_campaign_url_and_closing_cta_are_distinct_checks():
+    tx = Transcript.model_validate({
+        "duration_seconds": 74.0,
+        "segments": [{"start": 20.0, "end": 24.0,
+                      "text": "Visit aegisvpn.com/alex for the offer."}],
+    })
+    base = {
+        "id": "f",
+        "type": "URL_OR_CTA",
+        "label": "Campaign URL spoken",
+        "source_quote": "Visit the campaign URL.",
+        "expected": "aegisvpn.com/alex",
+    }
+    campaign_url = check_rule(Rule.model_validate(base), tx)
+    closing_cta = check_rule(
+        Rule.model_validate({**base, "id": "c", "label": "Closing call to action",
+                             "within_last_seconds": 15}),
+        tx,
+    )
+    assert campaign_url.status == "PASS"
+    assert closing_cta.status == "FAIL"
+    assert closing_cta.timestamp == 20.0

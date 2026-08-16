@@ -151,6 +151,20 @@
       "transcript": {"duration_seconds": 75.0, "segments": [{"start": 48.0, "end": 52.0, "text": "Go to aegis.com/alex and sign up."}]},
       "expected": "FAIL"
     },
+    {
+      "id": "url_or_cta/hard-negative-url-only-before-closing",
+      "note": "The campaign URL was spoken, but not during the final 15 seconds required by this closing-CTA rule.",
+      "rule": {"id": "f", "type": "URL_OR_CTA", "label": "Closing call to action", "source_quote": "The closing should include a direct call to action telling viewers to visit the campaign URL.", "expected": "aegisvpn.com/alex", "within_last_seconds": 15},
+      "transcript": {"duration_seconds": 74.0, "segments": [{"start": 20.0, "end": 24.0, "text": "Go to aegisvpn.com/alex for the offer."}, {"start": 63.0, "end": 74.0, "text": "Thanks for watching and back to the video."}]},
+      "expected": "FAIL"
+    },
+    {
+      "id": "url_or_cta/url-during-closing",
+      "note": "The campaign URL begins inside the final 15 seconds, so the closing-CTA placement is satisfied.",
+      "rule": {"id": "f", "type": "URL_OR_CTA", "label": "Closing call to action", "source_quote": "The closing should include a direct call to action telling viewers to visit the campaign URL.", "expected": "aegisvpn.com/alex", "within_last_seconds": 15},
+      "transcript": {"duration_seconds": 74.0, "segments": [{"start": 63.0, "end": 70.0, "text": "Go to aegisvpn.com/alex before your next trip."}]},
+      "expected": "PASS"
+    },
 
     {
       "id": "disclosure/present-and-early",

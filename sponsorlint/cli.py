@@ -21,7 +21,7 @@ import json
 import sys
 from pathlib import Path
 
-from .models import EmptySpecError, Spec, Transcript
+from .models import Spec, SpecError, Transcript
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SAMPLES = REPO_ROOT / "samples"
@@ -75,7 +75,7 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         return handler(rest)
-    except EmptySpecError as exc:
+    except SpecError as exc:
         print(str(exc), file=sys.stderr)
         return 2
     except SponsorLintError as exc:

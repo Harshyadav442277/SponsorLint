@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from sponsorlint.lint.engine import run
-from sponsorlint.models import EmptySpecError, Rule, Spec, Transcript
+from sponsorlint.models import EmptySpecError, Rule, Spec, SpecError, Transcript
 
 SAMPLES = Path(__file__).resolve().parents[1] / "samples"
 
@@ -92,12 +92,42 @@ def test_manual_review_items_are_excluded_from_the_score():
     assert report.score.fraction == "1/1"
 
 
+def test_any_failure_wins_over_warnings_and_unresolved_manual_items():
+    spec = Spec(
+        rules=[rule(id="fail"), rule(id="warn", severity="warning")],
+        manual_review=[{"source_quote": "Check the visual.", "reason": "Visual."}],
+    )
+    report = run(spec, transcript())
+    assert report.status == "DO_NOT_SEND"
+    assert (report.summary.fail, report.summary.warn, report.summary.manual_review) == (1, 1, 1)
+
+
+def test_every_manual_item_must_be_confirmed_before_sponsor_ready():
+    spec = Spec(
+        rules=[rule()],
+        manual_review=[
+            {"source_quote": "Check visual one.", "reason": "Visual.", "confirmed": True},
+            {"source_quote": "Check visual two.", "reason": "Visual.", "confirmed": False},
+        ],
+    )
+    assert run(spec, transcript("Try Shield Mode today.")).status == "REVIEW"
+
+    spec.manual_review[1].confirmed = True
+    assert run(spec, transcript("Try Shield Mode today.")).status == "SPONSOR_READY"
+
+
 # -- error handling --------------------------------------------------------
 
 
 def test_empty_spec_never_resolves_to_sponsor_ready():
     with pytest.raises(EmptySpecError):
         run(Spec(rules=[]), transcript())
+
+
+def test_review_required_rule_cannot_enter_the_verifier():
+    unresolved = rule(needs_review=True)
+    with pytest.raises(SpecError, match="flagged for review"):
+        run(Spec(rules=[unresolved]), transcript("Try Shield Mode today."))
 
 
 def test_a_validator_exception_becomes_manual_review_not_pass(monkeypatch):

@@ -12,6 +12,7 @@ from ..models import (
     Result,
     Score,
     Spec,
+    SpecError,
     Summary,
     Transcript,
 )
@@ -35,6 +36,9 @@ def run(spec: Spec, transcript: Transcript) -> Report:
     """Run the approved spec against the transcript and resolve readiness."""
     if not spec.rules:
         raise EmptySpecError("No requirements to check. Add at least one rule.")
+    blockers = spec.approval_blockers()
+    if blockers:
+        raise SpecError("Specification is not approved:\n" + "\n".join(blockers))
 
     results = [check_rule(rule, transcript) for rule in spec.rules]
     results.sort(key=lambda r: _ORDER[r.status])

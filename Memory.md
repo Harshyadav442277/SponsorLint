@@ -29,18 +29,18 @@ This file exists so a fresh agent — new chat, new tool, new context window —
 ## Current state
 
 ```
-Phase:            Post-audit hardening complete in code. External proof gates remain.
-Last gate passed: 129 passed + 1 intentional xfail; 39-fixture eval at 97.4%
-Clock:            built and hardened across five sessions, Aug 16 2026
-Submittable:      YES — Phase 4 gate and canonical browser arc verified
+Phase:            Final hostile hardening complete locally. Real-media/API proof gates remain.
+Last gate passed: 201 passed + 1 intentional xfail; 46-fixture eval at 97.8%
+Clock:            built and hardened across six sessions, Aug 16 2026
+Submittable:      READY FOR REAL-MEDIA VALIDATION — not submission-frozen
 ```
 
 **What works, verified by running it:**
 
 - `python -m sponsorlint demo` → `3 FAIL · 0 WARN · 4 PASS · 1 MANUAL CONFIRMED` → `4/7` → `DO NOT SEND`
 - `python -m sponsorlint demo --arc` → `V1 4/7 DO NOT SEND` → `V3 7/7 SPONSOR READY`
-- `python -m sponsorlint eval` → 39 fixtures, 38 correct, **97.4%**, 0 False PASSes, 1 False FAIL
-- `python -m pytest tests -q` → **129 passed, 1 xfailed** in 0.78s
+- `python -m sponsorlint eval` → 46 fixtures, 45 correct, **97.8%**, 0 False PASSes, 1 False FAIL
+- `python -m pytest tests -q` → **201 passed, 1 xfailed** in 0.82s (clean demo-only venv)
 - `python -m sponsorlint serve` → full four-screen flow drives end to end in a browser
 - All six validators, the engine, normalization, the eval harness, the terminal report
 - `compile` / `transcribe` are written but **not exercised live** (no key, no video)
@@ -50,8 +50,12 @@ Submittable:      YES — Phase 4 gate and canonical browser arc verified
   `REVIEW`, while the confirmed sample can still reach `SPONSOR READY`
 - Closing CTA uses `within_last_seconds: 15`; negated disclosures and fuzzy prefix/near-word false
   passes have adversarial regression coverage
-- GitHub Actions workflow covers Python 3.11–3.13, zero-key demo, eval, and tests; it requires a push
-  before GitHub can report a green run
+- Non-finite/impossible transcript timelines and wrong per-type rule fields are rejected at the
+  schema boundary; review-required specs are rejected by the core engine
+- Uploads are streamed through extension allowlists and hard caps, process-local state is bounded,
+  and cross-origin state-changing browser requests are rejected
+- GitHub Actions covers Python 3.11–3.13, zero-key demo, eval, and tests. All three versions pass
+  locally in isolated uv environments and remotely in green run 31959502930 on commit `880387e`
 
 **Verified in fresh `.venv-current` on Windows (full development dependencies):**
 
@@ -78,7 +82,7 @@ from `samples/script.md`, then follow the candidate-transcript commands in
 | 0 | Brief + V1 exist; Whisper hears the planted errors | ☐ **brief/script/PDF exist; V1 not recorded** |
 | 1 | One command → one real verdict from cached transcript | ☑ |
 | 2 | All six validators produce verdicts on V1 | ☑ |
-| 3 | `eval` prints real metrics, no hardcoded score | ☑ 97.4% |
+| 3 | `eval` prints real metrics, no hardcoded score | ☑ 97.8% |
 | **4** | **Fresh clone → `demo` → real output, no key** ← **SUBMITTABLE** | ☑ verified in `.venv-judge` |
 | 5 | Prose brief → correct spec, `min_seconds: 60` extracted | ☐ **code complete, no live API call made** |
 | 6 | Editing `73%` → `70%` flips the real verdict | ☑ verified in the browser and in `tests/test_engine.py` |
@@ -135,7 +139,7 @@ Pinned so nobody has to re-derive them.
 | Fuzzy scorer | `rapidfuzz.fuzz.partial_ratio` >= 90 over whole-token windows; required mentions repair adjacent transpositions only |
 | Canonical spec | 7 rules, all `severity: error` — see `PRD.md` §5 |
 | Demo command | `python -m sponsorlint demo` — no key, no download, run from repo root |
-| Real eval number | **97.4%** · 39 fixtures · 0 False PASSes · 1 False FAIL (documented limitation) |
+| Real eval number | **97.8%** · 46 fixtures · 0 False PASSes · 1 False FAIL (documented limitation) |
 | Never cut | eval number · zero-key demo · README |
 
 ### Measured values, so nobody re-litigates them
@@ -154,6 +158,22 @@ Pinned so nobody has to re-derive them.
 ## Session log
 
 *Newest first. One block per working session.*
+
+### Session 6 — final principal/security/QA audit · Aug 16, 2026
+
+- Reproduced remote CI run 31954685309: Python 3.11 failed on a nested escaped f-string while
+  3.12/3.13 passed; rewrote the source line and added terminal-render regression coverage
+- Reproduced and fixed false PASSes for non-finite durations, expected URLs embedded in longer
+  identifiers, and non-affirmative sponsorship language; expanded eval to 46 cases
+- Closed the identifier fallback that bypassed URL boundary guards and retained 0 False PASSes
+- Enforced the approval blocker in the core engine, finite/ordered transcript schemas, and strict
+  per-rule payload ownership; updated UI type changes to clear stale payload fields
+- Hardened compiler prompt isolation, ffprobe timeout/duration handling, streamed upload limits,
+  extension allowlists, cross-origin write rejection, bounded in-memory state, and HTML escaping tests
+- Added practical dependency ranges and current Node 24 GitHub Actions versions
+- Verified 201 passed + 1 xfailed on isolated Python 3.11, 3.12, and 3.13; clean lightweight and
+  full dependency installs succeeded; live localhost serve and sample API succeeded
+- Did not claim real-media or live-compiler success: no recorded MP4 or API credential was supplied
 
 ### Session 5 — adversarial critique implementation · Aug 16, 2026
 
@@ -272,13 +292,15 @@ Every validator, the eval and the demo run for real against them; only the *prov
 text is different. Flagged in `samples/README.md` and in the README limitations. **Regenerate both
 with `transcribe` once the takes exist** — nothing else changes.
 
-**D-2 · Eval fixture set rebalanced, then expanded to 39.** The first 30 scored 30/30, which measures
+**D-2 · Eval fixture set rebalanced, then expanded to 46.** The first 30 scored 30/30, which measures
 the fixtures rather than the tool. Dropped six weak cases (`must_say/exact`,
 `must_say/case-and-punctuation`, `must_not_say/negated-still-spoken`,
 `exact_value/spelled-out-unhyphenated`, `url_or_cta/mixed-case`, `duration/inside-window`) and
 added six harder ones, including one **deliberate known-limitation case labeled by ground truth**
 that produces a real False FAIL. The adversarial audit later added nine false-pass and placement
-cases, bringing the published set to 39 and the measured result to 97.4%.
+cases, bringing the published set to 39 and the measured result to 97.4%. The final hostile audit
+added seven URL-continuation and non-affirmative disclosure cases, bringing the set to 46 and the
+measured result to 97.8% with the same single documented False FAIL.
 
 **D-3 · `URL_OR_CTA` does not fuzzy-match URLs or promo codes.** `Architecture.md` §5.3 says
 "canonicalize both sides, then containment"; it does not forbid a fuzzy fallback, and my first

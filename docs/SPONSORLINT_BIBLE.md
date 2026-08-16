@@ -601,7 +601,7 @@ sponsorlint eval                                   # validator metrics
 
 # 16. THE EVAL HARNESS — CORE, NOT STRETCH
 
-**39 pure-text fixtures. No video. No Whisper. No API calls. Runs in under a second.**
+**46 pure-text fixtures. No video. No Whisper. No API calls. Runs in under a second.**
 
 This is the single highest-leverage feature in the build, and almost no submission in the field will have one.
 
@@ -626,14 +626,14 @@ The number is worthless without them.
 ```text
 SponsorLint Validator Evaluation
 --------------------------------
-Fixtures:          28
-Correct:           27
+Fixtures:          46
+Correct:           45
 Incorrect:          1
-Accuracy:        96.4%
+Accuracy:        97.8%
 
-False FAILs:        0
-False PASSes:       1
-Manual Review:      3
+False FAILs:        1
+False PASSes:       0
+Manual Review:      1
 ```
 
 **Do not fabricate perfection.** Publish whatever the real number is.
@@ -828,7 +828,7 @@ In order: `MUST_SAY` → `MUST_NOT_SAY` → `EXACT_VALUE` → `MUST_DISCLOSE` �
 ---
 
 ### `T+3:15 – 5:15` · PHASE 3 — Normalization depth + eval harness
-Numbers, currency, URLs, promo codes. Then 39 fixtures and `sponsorlint eval`.
+Numbers, currency, URLs, promo codes. Then 46 fixtures and `sponsorlint eval`.
 
 > **GATE 5:15** — real metrics printed. No hardcoded score. False FAILs and false PASSes both visible.
 
@@ -1009,8 +1009,8 @@ Close on:
 **"Does it check visuals?"**
 > Not in the MVP. Unsupported visual requirements are explicitly marked for manual review rather than guessed.
 
-**"Only n=28 in your eval."**
-> Correct, and it is stated. It is 28 more labeled cases than most submissions have, the fixtures are in the repo, and the hard negatives are the ones that matter.
+**"Only n=46 in your eval."**
+> Correct, and it is stated. The fixtures are in the repo, and the hard negatives are the ones that matter.
 
 ---
 

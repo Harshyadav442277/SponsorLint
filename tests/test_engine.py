@@ -56,20 +56,31 @@ def test_a_passing_rule_reports_pass_regardless_of_severity():
     assert report.status == "SPONSOR_READY"
 
 
-# -- manual review never affects readiness --------------------------------
+# -- manual review is explicit and blocks until resolved -------------------
 
 
-def test_manual_review_items_never_block_sponsor_ready():
-    """The demo brief always yields one manual-review item and it survives
-    every re-record. If it could reach REVIEW, V3 would resolve REVIEW forever."""
+def test_unresolved_manual_review_item_is_review():
     spec = Spec(
         rules=[rule()],
         manual_review=[{"source_quote": "Interface visible for five seconds.",
                         "reason": "Visual requirement."}],
     )
     report = run(spec, transcript("Try Shield Mode today."))
-    assert report.status == "SPONSOR_READY"
+    assert report.status == "REVIEW"
     assert report.summary.manual_review == 1
+    assert report.summary.manual_confirmed == 0
+
+
+def test_confirmed_manual_review_item_allows_sponsor_ready():
+    spec = Spec(
+        rules=[rule()],
+        manual_review=[{"source_quote": "Interface visible for five seconds.",
+                        "reason": "Visual requirement.", "confirmed": True}],
+    )
+    report = run(spec, transcript("Try Shield Mode today."))
+    assert report.status == "SPONSOR_READY"
+    assert report.summary.manual_review == 0
+    assert report.summary.manual_confirmed == 1
 
 
 def test_manual_review_items_are_excluded_from_the_score():
@@ -98,6 +109,7 @@ def test_a_validator_exception_becomes_manual_review_not_pass(monkeypatch):
     monkeypatch.setitem(engine.VALIDATORS, "MUST_SAY", boom)
     report = run(Spec(rules=[rule()]), transcript())
     assert report.results[0].status == "MANUAL_REVIEW"
+    assert report.status == "REVIEW"
     assert "kaboom" in report.results[0].advisory
 
 
@@ -113,7 +125,8 @@ def test_v1_produces_the_canonical_verdict():
     report = run(spec, Transcript.model_validate(load("transcript.v1.json")))
 
     assert (report.summary.fail, report.summary.warn,
-            report.summary.passed, report.summary.manual_review) == (3, 0, 4, 1)
+            report.summary.passed, report.summary.manual_review) == (3, 0, 4, 0)
+    assert report.summary.manual_confirmed == 1
     assert report.score.fraction == "4/7"
     assert report.status == "DO_NOT_SEND"
 

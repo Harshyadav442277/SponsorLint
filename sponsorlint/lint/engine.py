@@ -45,11 +45,12 @@ def run(spec: Spec, transcript: Transcript) -> Report:
         warn=sum(1 for r in results if r.status == "WARN"),
         fail=sum(1 for r in results if r.status == "FAIL"),
         manual_review=sum(1 for r in results if r.status == "MANUAL_REVIEW")
-        + len(spec.manual_review),
+        + sum(1 for item in spec.manual_review if not item.confirmed),
+        manual_confirmed=sum(1 for item in spec.manual_review if item.confirmed),
     )
 
     return Report(
-        status=_readiness(results),
+        status=_readiness(results, spec),
         summary=summary,
         score=Score(passed=summary.passed, total=len(scored)),
         results=results,
@@ -89,12 +90,12 @@ def check_rule(rule, transcript: Transcript) -> Result:
     return outcome
 
 
-def _readiness(results: list[Result]) -> str:
-    """Three mutually exclusive clauses. Manual-review items appear in none of
-    them: they are excluded from the score, listed separately, and never affect
-    the readiness state."""
+def _readiness(results: list[Result], spec: Spec) -> str:
+    """Resolve failures first; uncertainty stays REVIEW until a human resolves it."""
     if any(r.status == "FAIL" for r in results):
         return "DO_NOT_SEND"
-    if any(r.status == "WARN" for r in results):
+    if any(r.status in ("WARN", "MANUAL_REVIEW") for r in results):
+        return "REVIEW"
+    if any(not item.confirmed for item in spec.manual_review):
         return "REVIEW"
     return "SPONSOR_READY"

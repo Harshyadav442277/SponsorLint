@@ -15,6 +15,44 @@ const el = (tag, cls, text) => {
   return node;
 };
 
+function resolveThesis() {
+  const node = $("resolve-text");
+  if (!node) return;
+  const final = "AI PROPOSES / YOU APPROVE / CODE ENFORCES";
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    node.textContent = final;
+    return;
+  }
+
+  const glyphs = "#/[]{}01+*";
+  const frames = 14;
+  let frame = 0;
+  const timer = window.setInterval(() => {
+    const settled = Math.ceil((frame / frames) * final.length);
+    node.textContent = [...final].map((character, index) => {
+      if (character === " " || index < settled) return character;
+      return glyphs[(index * 3 + frame * 5) % glyphs.length];
+    }).join("");
+    frame += 1;
+    if (frame > frames) {
+      window.clearInterval(timer);
+      node.textContent = final;
+    }
+  }, 58);
+}
+
+function showFileName(inputId, labelId, fallback) {
+  const inputNode = $(inputId);
+  const labelNode = $(labelId);
+  inputNode.addEventListener("change", () => {
+    labelNode.textContent = inputNode.files[0]?.name || fallback;
+  });
+}
+
+resolveThesis();
+showFileName("brief-file", "brief-file-name", "PDF · MD · TXT · up to 10 MiB");
+showFileName("video-file", "video-file-name", "Real faster-whisper transcription");
+
 /* ----------------------------------------------------------- screens */
 
 function show(name) {
@@ -103,7 +141,7 @@ $("compile").addEventListener("click", async () => {
     fail(err.message);
   } finally {
     button.disabled = false;
-    button.textContent = "Compile Brief";
+    button.textContent = "Compile brief →";
   }
 });
 
@@ -253,7 +291,7 @@ function renderReview() {
   manual.forEach((item) => {
     const card = el("div", "result result--manual");
     const head = el("div", "result-head");
-    head.appendChild(el("span", "chip chip--manual", "MANUAL"));
+    head.appendChild(el("span", "chip chip--manual", "◇ HUMAN CHECK"));
     head.appendChild(el("h3", null, item.reason));
     card.appendChild(head);
     card.appendChild(el("div", "evidence", `"${item.source_quote}"`));
@@ -332,17 +370,46 @@ $("approve").addEventListener("click", async () => {
 
 function renderTakes() {
   const select = $("take");
+  const optionsHost = $("take-options");
   select.innerHTML = "";
+  optionsHost.innerHTML = "";
   if (!state.takes.length) {
     const opt = el("option", null, "No committed takes found");
     opt.value = "";
     select.appendChild(opt);
+    optionsHost.appendChild(el("p", "muted", "No committed takes for a custom brief. Upload your recording instead."));
     return;
   }
-  state.takes.forEach((t) => {
+  state.takes.forEach((t, index) => {
     const opt = el("option", null, t.label);
     opt.value = t.id;
     select.appendChild(opt);
+
+    const label = el("label", "take-option");
+    if (index === 0) label.classList.add("is-selected");
+    const radio = document.createElement("input");
+    radio.type = "radio";
+    radio.name = "take-card";
+    radio.value = t.id;
+    radio.checked = index === 0;
+    radio.addEventListener("change", () => {
+      select.value = t.id;
+      optionsHost.querySelectorAll(".take-option").forEach((item) =>
+        item.classList.toggle("is-selected", item === label)
+      );
+    });
+    label.appendChild(radio);
+    label.appendChild(el("span", "take-index", t.id.toUpperCase()));
+    const copy = el("span", "take-copy");
+    copy.appendChild(el("strong", null, t.label));
+    copy.appendChild(el(
+      "small",
+      null,
+      t.id === "v1" ? "Known failing original" : "Corrected automated take"
+    ));
+    label.appendChild(copy);
+    label.appendChild(el("span", "take-state", t.id === "v1" ? "4/7" : "7/7"));
+    optionsHost.appendChild(label);
   });
 }
 
@@ -412,12 +479,30 @@ function renderReport(report) {
   const verdict = $("verdict");
   verdict.innerHTML = "";
   const banner = el("div", `verdict verdict--${report.state_class}`);
-  banner.appendChild(el("div", "icon", report.icon));
-  const body = el("div");
+  const body = el("div", "verdict-main");
+  const kicker = el("div", "verdict-kicker");
+  kicker.appendChild(el("span", "icon", report.icon));
+  kicker.appendChild(document.createTextNode(
+    report.status === "DO_NOT_SEND" ? "Automated blocking verdict" : "Readiness verdict"
+  ));
+  body.appendChild(kicker);
   body.appendChild(el("h2", null, report.label));
   body.appendChild(el("p", null, report.subline));
-  body.appendChild(el("span", "score", `${report.score} requirements passed`));
   banner.appendChild(body);
+
+  const stats = el("div", "verdict-stats");
+  const score = report.score.split("/").map((part) => part.padStart(2, "0")).join("/");
+  const scoreStat = el("div", "verdict-stat");
+  scoreStat.appendChild(el("strong", null, score));
+  scoreStat.appendChild(el("span", null, "Automated pass count"));
+  stats.appendChild(scoreStat);
+  const gateStat = el("div", "verdict-stat");
+  const manualOpen = Number(report.summary.manual_review || 0);
+  const blocking = Number(report.summary.fail || 0) + Number(report.summary.warn || 0);
+  gateStat.appendChild(el("strong", null, String(blocking || manualOpen)));
+  gateStat.appendChild(el("span", null, blocking ? "Blocking findings" : "Human check open"));
+  stats.appendChild(gateStat);
+  banner.appendChild(stats);
   verdict.appendChild(banner);
 
   const host = $("findings");
@@ -427,17 +512,23 @@ function renderReport(report) {
   const manualResults = report.results.filter((r) => r.status === "MANUAL_REVIEW");
   const passes = report.results.filter((r) => r.status === "PASS");
 
+  if (failures.length) {
+    const heading = el("div", "findings-heading");
+    heading.appendChild(el("h3", null, "Blocking findings"));
+    heading.appendChild(el("span", null, `${failures.length} require attention`));
+    host.appendChild(heading);
+  }
   failures.forEach((r) => host.appendChild(resultCard(r)));
 
   if (manualResults.length || report.manual_review.length) {
-    host.appendChild(el("p", "section-label", "Manual review"));
+    host.appendChild(el("p", "section-label", "◇ Human check · never automated"));
     manualResults.forEach((r) => host.appendChild(resultCard(r)));
     report.manual_review.forEach((item) => {
       const card = el("div", "result result--manual");
       const head = el("div", "result-head");
       head.appendChild(
         el("span", `chip chip--${item.confirmed ? "pass" : "manual"}`,
-          item.confirmed ? "CONFIRMED" : "MANUAL")
+          item.confirmed ? "✓ HUMAN CONFIRMED" : "◇ HUMAN CHECK")
       );
       head.appendChild(el("h3", null, item.reason));
       card.appendChild(head);
@@ -455,7 +546,7 @@ function renderReport(report) {
 
   if (passes.length) {
     const details = el("details", "passes");
-    details.appendChild(el("summary", null, `${passes.length} passing requirements`));
+    details.appendChild(el("summary", null, `${String(passes.length).padStart(2, "0")} passing automated requirements`));
     passes.forEach((r) => details.appendChild(resultCard(r)));
     host.appendChild(details);
   }

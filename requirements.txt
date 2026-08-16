@@ -6,4 +6,4 @@ pypdf
 faster-whisper
 anthropic
 pytest
-httpx2
+httpx

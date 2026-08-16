@@ -44,7 +44,7 @@ REPORTS: dict[str, dict] = {}
 
 
 @app.get("/")
-def index(request: Request):
+async def index(request: Request):
     return templates.TemplateResponse(request, "index.html")
 
 
@@ -54,7 +54,7 @@ def index(request: Request):
 
 
 @app.get("/api/sample")
-def sample():
+async def sample():
     """The committed demo campaign. A judge who uploads nothing still reaches
     the report screen."""
     try:
@@ -202,7 +202,7 @@ async def _transcribe_upload(video: UploadFile) -> Transcript:
 
 
 @app.get("/api/report/{report_id}")
-def get_report(report_id: str):
+async def get_report(report_id: str):
     report = REPORTS.get(report_id)
     if report is None:
         raise HTTPException(404, "No such report.")

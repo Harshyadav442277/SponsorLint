@@ -137,7 +137,8 @@ def _render_result(result: Result, paint: _Paint) -> list[str]:
         lines.append(f"        {paint(result.advisory, _DIM)}")
     if result.source_quote:
         quote = _shorten(result.source_quote, 58)
-        lines.append(f"        {paint(f'from brief: \"{quote}\"', _DIM)}")
+        source_line = f'from brief: "{quote}"'
+        lines.append(f"        {paint(source_line, _DIM)}")
 
     lines.append("")
     return lines

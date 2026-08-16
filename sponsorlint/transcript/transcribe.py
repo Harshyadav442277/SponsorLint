@@ -9,8 +9,11 @@ downstream test and the zero-key demo run against.
 
 from __future__ import annotations
 
+import math
 import sys
 from pathlib import Path
+
+from pydantic import ValidationError
 
 from ..models import Segment, Transcript
 from .probe import ProbeError, probe_duration
@@ -53,11 +56,27 @@ def transcribe(path: Path, model_size: str = "base.en") -> Transcript:
             f"Could not transcribe {path.name} — no speech was detected."
         )
 
-    return Transcript(
+    return _validated_transcript(
         duration_seconds=_duration(path, info),
         segments=segments,
         source=path.name,
     )
+
+
+def _validated_transcript(
+    *, duration_seconds: float, segments: list[Segment], source: str
+) -> Transcript:
+    """Turn impossible decoder timelines into a controlled media error."""
+    try:
+        return Transcript(
+            duration_seconds=duration_seconds,
+            segments=segments,
+            source=source,
+        )
+    except ValidationError as exc:
+        raise TranscribeError(
+            f"Could not transcribe {source} — decoder returned invalid timestamps: {exc}"
+        ) from exc
 
 
 def _duration(path: Path, info) -> float:
@@ -68,7 +87,7 @@ def _duration(path: Path, info) -> float:
         return round(probe_duration(path), 2)
     except ProbeError as exc:
         fallback = round(float(getattr(info, "duration", 0.0)), 2)
-        if not fallback:
+        if not math.isfinite(fallback) or fallback <= 0:
             raise TranscribeError(str(exc)) from exc
         print(f"  note: {exc}", file=sys.stderr)
         print(f"  note: using the decoder's own duration instead ({fallback}s).",

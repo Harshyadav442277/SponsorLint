@@ -86,8 +86,8 @@ python -m sponsorlint serve
 Open http://127.0.0.1:8000, click **Load sample campaign**, and walk the four screens.
 
 > The demo runs the **real** verifier against a committed brief, specification and transcript.
-> Only the expensive deterministic upstream steps are cached. No verdict is hardcoded — change
-> `73%` to `70%` in the review screen and the verdict changes with it.
+> The approved specification and transcript fixture are committed as reproducible inputs. No
+> verdict is hardcoded — change `73%` to `70%` in the review screen and the verdict changes with it.
 
 ---
 

@@ -57,5 +57,8 @@ recognizable. If any is mangled, change the wording **now**.
 | "This video is sponsored by" | "seventy-three percent" |
 
 ```bash
-python -m sponsorlint transcribe samples/sponsor-cut-v1.mp4 -o samples/transcript.v1.json
+python -m sponsorlint transcribe samples/sponsor-cut-v1.mp4 -o samples/transcript.v1.whisper.json
 ```
+
+Inspect this candidate and confirm all six strings above before intentionally using it.
+Do not overwrite the authored `transcript.v1.json` fixture during the recording gate.

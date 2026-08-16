@@ -29,10 +29,10 @@ This file exists so a fresh agent — new chat, new tool, new context window —
 ## Current state
 
 ```
-Phase:            Final hostile hardening complete locally. Real-media/API proof gates remain.
+Phase:            Core hardening complete; ready for final independent review.
 Last gate passed: 201 passed + 1 intentional xfail; 46-fixture eval at 97.8%
 Clock:            built and hardened across six sessions, Aug 16 2026
-Submittable:      READY FOR REAL-MEDIA VALIDATION — not submission-frozen
+Submittable:      REVIEW-READY — real-media/API proof gates open; not submission-frozen
 ```
 
 **What works, verified by running it:**
@@ -40,7 +40,7 @@ Submittable:      READY FOR REAL-MEDIA VALIDATION — not submission-frozen
 - `python -m sponsorlint demo` → `3 FAIL · 0 WARN · 4 PASS · 1 MANUAL CONFIRMED` → `4/7` → `DO NOT SEND`
 - `python -m sponsorlint demo --arc` → `V1 4/7 DO NOT SEND` → `V3 7/7 SPONSOR READY`
 - `python -m sponsorlint eval` → 46 fixtures, 45 correct, **97.8%**, 0 False PASSes, 1 False FAIL
-- `python -m pytest tests -q` → **201 passed, 1 xfailed** in 0.82s (clean demo-only venv)
+- `python -m pytest tests -q` → **201 passed, 1 xfailed** in 0.92s (fresh lightweight CI-equivalent venv)
 - `python -m sponsorlint serve` → full four-screen flow drives end to end in a browser
 - All six validators, the engine, normalization, the eval harness, the terminal report
 - `compile` / `transcribe` are written but **not exercised live** (no key, no video)
@@ -55,7 +55,8 @@ Submittable:      READY FOR REAL-MEDIA VALIDATION — not submission-frozen
 - Uploads are streamed through extension allowlists and hard caps, process-local state is bounded,
   and cross-origin state-changing browser requests are rejected
 - GitHub Actions covers Python 3.11–3.13, zero-key demo, eval, and tests. All three versions pass
-  locally in isolated uv environments and remotely in green run 31959502930 on commit `880387e`
+  locally in isolated environments. The old green run referenced here belonged to superseded
+  history; the latest remote run must be rechecked after the final push.
 
 **Verified in fresh `.venv-current` on Windows (full development dependencies):**
 
@@ -68,9 +69,9 @@ Submittable:      READY FOR REAL-MEDIA VALIDATION — not submission-frozen
 - Missing-key and missing-video failures are readable CLI errors with exit code 2, not tracebacks
 - The earlier `.venv-judge` no-ffmpeg reproduction remains historical evidence; its Python 3.12 base was removed from this machine, so its launcher is now stale
 
-**Next action:** record `samples/sponsor-cut-v1.mp4` and `samples/sponsor-cut-v3.mp4`
-from `samples/script.md`, then follow the candidate-transcript commands in
-`samples/README.md`. Do not overwrite the authored fixtures before the six-string gate passes.
+**Next action:** reauthenticate GitHub CLI as a repository owner, update the stale repository
+description/topics, and inspect the latest `main` CI matrix. Then record the MP4s using the safe
+candidate-transcript workflow in `samples/README.md`.
 
 ---
 
@@ -158,6 +159,17 @@ Pinned so nobody has to re-derive them.
 ## Session log
 
 *Newest first. One block per working session.*
+
+### Session 7 — final pre-media freeze pass · Aug 16, 2026
+
+- Reproduced the canonical V1/V3 arc, 46-fixture eval at 97.8% with 0 False PASSes, and
+  201 passed + 1 intentional xfail before editing
+- Repeated the lightweight path in a fresh venv: no Anthropic, Whisper, PDF, API-key, model-download,
+  or ffmpeg dependency was needed for demo/eval; missing compiler key exited 2 without a traceback
+- Kept the core frozen; corrected only current-facing documentation and the candidate-transcript
+  recording command
+- Found GitHub CLI authenticated as the wrong account with an invalid token, so metadata and current
+  remote CI could not be changed or honestly verified from this environment
 
 ### Session 6 — final principal/security/QA audit · Aug 16, 2026
 
@@ -362,8 +374,9 @@ Cut order from `Rules.md` §9: demo video → jump-to-timestamp → UI polish �
 
 ## Handoff note
 
-> Everything is built and the zero-key path is verified in a clean demo-only venv — the project is
-> submittable as it stands. The one missing artifact is the recording: write it from
+> The hardened core and zero-key path are verified in a fresh lightweight venv, and the project is
+> ready for final independent review but is not submission-frozen. The open empirical gates are the
+> recordings and one live compiler call: write the takes from
 > `samples/script.md`, check GATE 2:00 (all six critical strings, both columns) *before*
 > committing to the take, then regenerate both transcripts with `transcribe`. Read
 > **Deviations D-1** first — the committed transcripts are authored fixtures, and the README says so.

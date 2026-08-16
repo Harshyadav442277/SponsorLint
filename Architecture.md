@@ -175,11 +175,10 @@ sponsorlint/
 ├── samples/
 │   ├── brief.md
 │   ├── brief.pdf
+│   ├── script.md                    recording and six-string gate
 │   ├── spec.approved.json        COMMITTED — enables zero-key demo
 │   ├── transcript.v1.json        COMMITTED
-│   ├── transcript.v3.json        COMMITTED
-│   ├── sponsor-cut-v1.mp4
-│   └── sponsor-cut-v3.mp4
+│   └── transcript.v3.json        COMMITTED
 │
 ├── tests/
 │   ├── test_normalize_numbers.py
@@ -193,6 +192,10 @@ sponsorlint/
 ├── requirements-demo.txt
 └── requirements.txt
 ```
+
+The real `sponsor-cut-v1.mp4` and `sponsor-cut-v3.mp4` are intentionally absent until the
+pre-media recording gate is completed; the committed transcripts remain clearly labeled authored
+fixtures in `samples/README.md`.
 
 **Do not reorganize a working repo for aesthetics.**
 
@@ -511,7 +514,8 @@ as manually confirmed, so V1 is `DO NOT SEND` and V3 is `SPONSOR READY`.
 
 ### On the score
 
-If a percentage is shown, it is `passed weighted rules / total weighted rules × 100` and nothing else.
+If a percentage is shown, it is `passed scored automated rules / total scored automated rules × 100`
+and nothing else. No rule weighting is implemented.
 
 **Do not engineer weights to produce a nicer-looking number**, and do not carry a target percentage from any earlier draft. Report what the formula produces. Better still, prefer the raw fraction in demo material — it is more trustworthy and cannot be accused of being tuned:
 
@@ -684,7 +688,8 @@ python -m sponsorlint demo
 
 Runs the **real deterministic verifier** against `samples/spec.approved.json` and `samples/transcript.v1.json` — the same two inputs `verify` takes, so the demo and the eval exercise identical code paths. Duration comes from `transcript.duration_seconds` (§4.3), which is why no ffmpeg is needed on the judge's machine.
 
-**No hardcoded verdicts.** The check executes for real; only the expensive, deterministic upstream steps are cached.
+**No hardcoded verdicts.** The approved specification and transcript fixture are committed as
+reproducible inputs; the verifier computes the verdict at runtime.
 
 > **Caching is not cheating; fake output is.**
 

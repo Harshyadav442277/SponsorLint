@@ -125,6 +125,15 @@ const TYPES = [
   "URL_OR_CTA",
 ];
 
+const RULE_PAYLOAD_KEYS = [
+  "expected",
+  "phrases",
+  "min_seconds",
+  "max_seconds",
+  "within_first_seconds",
+  "within_last_seconds",
+];
+
 function fieldsFor(rule) {
   switch (rule.type) {
     case "MUST_SAY":
@@ -173,7 +182,9 @@ function renderReview() {
       typeSelect.appendChild(opt);
     });
     typeSelect.addEventListener("change", () => {
+      RULE_PAYLOAD_KEYS.forEach((key) => delete rule[key]);
       rule.type = typeSelect.value;
+      rule.needs_review = false;
       renderReview();
     });
     head.appendChild(typeSelect);

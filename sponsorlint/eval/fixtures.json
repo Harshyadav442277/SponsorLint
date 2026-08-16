@@ -209,6 +209,34 @@
       "expected": "FAIL"
     },
     {
+      "id": "disclosure/hard-negative-not-sponsored-by",
+      "note": "HARD NEGATIVE. An explicit denial is not a sponsorship disclosure.",
+      "rule": {"id": "f", "type": "MUST_DISCLOSE", "label": "Sponsorship disclosure", "source_quote": "Please disclose the sponsorship.", "within_first_seconds": 15},
+      "transcript": {"duration_seconds": 75.0, "segments": [{"start": 1.0, "end": 5.0, "text": "This video is not sponsored by Aegis VPN."}]},
+      "expected": "FAIL"
+    },
+    {
+      "id": "disclosure/hard-negative-isnt-sponsored-by",
+      "note": "HARD NEGATIVE. A contracted denial is not a sponsorship disclosure.",
+      "rule": {"id": "f", "type": "MUST_DISCLOSE", "label": "Sponsorship disclosure", "source_quote": "Please disclose the sponsorship.", "within_first_seconds": 15},
+      "transcript": {"duration_seconds": 75.0, "segments": [{"start": 1.0, "end": 5.0, "text": "This isn't sponsored by Aegis VPN."}]},
+      "expected": "FAIL"
+    },
+    {
+      "id": "disclosure/hard-negative-not-paid-partnership",
+      "note": "HARD NEGATIVE. A denial containing the generic paid-partnership phrase must not pass.",
+      "rule": {"id": "f", "type": "MUST_DISCLOSE", "label": "Sponsorship disclosure", "source_quote": "Please disclose the sponsorship.", "within_first_seconds": 15},
+      "transcript": {"duration_seconds": 75.0, "segments": [{"start": 1.0, "end": 5.0, "text": "This is not a paid partnership."}]},
+      "expected": "FAIL"
+    },
+    {
+      "id": "disclosure/hard-negative-wish-sponsored",
+      "note": "HARD NEGATIVE. A counterfactual wish is not a sponsorship disclosure.",
+      "rule": {"id": "f", "type": "MUST_DISCLOSE", "label": "Sponsorship disclosure", "source_quote": "Please disclose the sponsorship.", "within_first_seconds": 15},
+      "transcript": {"duration_seconds": 75.0, "segments": [{"start": 1.0, "end": 5.0, "text": "I wish this video was sponsored by Aegis VPN."}]},
+      "expected": "FAIL"
+    },
+    {
       "id": "disclosure/present-but-late",
       "note": "Present, but after the placement window the user set.",
       "rule": {"id": "f", "type": "MUST_DISCLOSE", "label": "Sponsorship disclosure", "source_quote": "Please make clear near the beginning of the integration that this video is sponsored by Aegis VPN.", "within_first_seconds": 15},

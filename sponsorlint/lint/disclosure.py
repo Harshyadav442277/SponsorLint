@@ -45,19 +45,30 @@ def _earliest(hay: Haystack):
     best = None
     best_offset = None
     for pattern in DISCLOSURE_PATTERNS:
-        match = pattern.search(hay.numeric)
-        if match is None:
-            continue
-        offset = match.start()
-        if best_offset is None or offset < best_offset or (
-            offset == best_offset and len(match.group(0)) > len(best[1])
-        ):
-            best_offset = offset
-            best = (pattern, match.group(0))
+        for match in pattern.finditer(hay.numeric):
+            offset = match.start()
+            if _is_negated(hay.numeric, offset):
+                continue
+            if best_offset is None or offset < best_offset or (
+                offset == best_offset and len(match.group(0)) > len(best[1])
+            ):
+                best_offset = offset
+                best = (offset, match.group(0))
 
     if best is None:
         return None
-    return hay.search(best[0])
+    return hay.hit_at(best[0], best[1])
+
+
+def _is_negated(text: str, match_start: int) -> bool:
+    """Reject narrow, deterministic negations/counterfactuals near a hit."""
+    prefix = text[max(0, match_start - 80) : match_start]
+    negation = re.search(
+        r"\b(?:not|never|isn't|isnt)\b(?:\s+(?:a|an|the|this|video|is|was)){0,4}\s*$",
+        prefix,
+    )
+    counterfactual = re.search(r"\bwish\b(?:\s+[a-z0-9']+){0,6}\s*$", prefix)
+    return negation is not None or counterfactual is not None
 
 
 def check(rule: Rule, tx: Transcript) -> Result:

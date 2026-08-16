@@ -279,6 +279,20 @@ acceptance test, but it is not present in the frozen demo brief, canonical seven
 spec, or recording script. GATE 2:00 therefore has six spoken strings, not seven;
 requiring a seventh would force the recording to invent a requirement the brief never made.
 
+## D22 · Trust holes closed after adversarial audit
+
+Aug 16, 2026. This decision supersedes D21i's treatment of manual-review readiness. An unchecked
+visual requirement cannot coexist honestly with `SPONSOR READY`. Manual items now carry an explicit
+`confirmed` boolean: unresolved items produce `REVIEW`, confirmed items remain outside the automated
+score, and only a fully resolved spec can become `SPONSOR READY`.
+
+The same audit established five related constraints: fuzzy `MUST_SAY` matches must respect whole
+tokens and only repair adjacent-letter transpositions; negated disclosures do not count;
+`URL_OR_CTA.within_last_seconds` makes a closing CTA a real placement check; compiler-provided source
+quotes must literally occur in the submitted brief after whitespace normalization; and the one-shot
+`analyze --yes` path is removed because it bypassed human approval. These are hardening changes to
+the existing trust architecture, not new product scope.
+
 ---
 
 ## Open questions

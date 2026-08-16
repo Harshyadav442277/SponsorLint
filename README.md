@@ -1,9 +1,13 @@
 # SponsorLint
 
-**Every other tool generates content. This one checks it.**
+[![CI](https://github.com/Harshyadav442277/social-media-automation/actions/workflows/ci.yml/badge.svg)](https://github.com/Harshyadav442277/social-media-automation/actions/workflows/ci.yml)
 
-SponsorLint turns a sponsor brief into executable checks and runs them against the actual
-recorded sponsor integration.
+## A sponsor brief is a contract. SponsorLint makes it executable.
+
+Compile a sponsor brief into a creator-approved specification, then deterministically verify the
+actual recorded integration with timestamped evidence.
+
+**AI proposes the spec. You approve it. Deterministic code enforces it.**
 
 > **Sponsor brief → executable requirements → sponsor video → timestamped PASS / WARN / FAIL.**
 
@@ -16,8 +20,8 @@ recorded sponsor integration.
 ❌ PROHIBITED CLAIM     Detected: "completely anonymous"              00:31
    "It keeps you completely anonymous online."
 
-□  MANUAL REVIEW        "Product interface visible for at least five seconds."
-                        SponsorLint does not verify visual requirements.
+✓  MANUAL CONFIRMED     "Product interface visible for at least five seconds."
+                        Confirmed by the creator during spec review.
 
 4/7 requirements passed                                        DO NOT SEND
 ```
@@ -54,7 +58,8 @@ OUT   1 reviewed, approved machine-readable specification
 **No API key. No model download. No ffmpeg. Six packages.**
 
 ```bash
-git clone <this repo> && cd sponsorlint
+git clone https://github.com/Harshyadav442277/social-media-automation.git
+cd social-media-automation
 python -m venv .venv && .venv/bin/pip install -r requirements-demo.txt
 .venv/bin/python -m sponsorlint demo
 ```
@@ -88,14 +93,14 @@ Open http://127.0.0.1:8000, click **Load sample campaign**, and walk the four sc
 
 ## Does it actually work?
 
-`python -m sponsorlint eval` runs every validator over 30 hand-labeled text fixtures, most of them
+`python -m sponsorlint eval` runs every validator over 39 hand-labeled text fixtures, most of them
 deliberate hard negatives, and prints what actually happened:
 
 ```
-Fixtures:           30
-Correct:            29
+Fixtures:           39
+Correct:            38
 Incorrect:           1
-Accuracy:        96.7%
+Accuracy:        97.4%
 
 False FAILs:         1     (reported FAIL, requirement was satisfied)
 False PASSes:        0     (reported PASS, requirement was violated)
@@ -124,7 +129,7 @@ assertions the unit tests use — written once, used twice.
 
 ```bash
 python -m sponsorlint eval --verbose   # every case, pass or miss
-python -m pytest tests -q              # 111 tests (needs requirements.txt)
+python -m pytest tests -q              # 129 passed, 1 intentional xfail
 ```
 
 ---
@@ -155,6 +160,10 @@ python -m pytest tests -q              # 111 tests (needs requirements.txt)
 
 **The model proposes the specification. You own the specification. Deterministic code enforces the
 approved specification.**
+
+The compiler also normalizes whitespace and verifies that every rule and manual-review
+`source_quote` literally occurs in the submitted brief. An invented citation is retried once and
+then rejected; it cannot become trusted provenance.
 
 That split is the whole design, and four properties fall out of it:
 
@@ -190,7 +199,9 @@ Six executable types. Each validator is a pure `(rule, transcript) -> Result` fu
 | `URL_OR_CTA` | The tracked URL, promo code or call to action is spoken |
 
 Anything a validator cannot check becomes **MANUAL REVIEW** — surfaced, never dropped, never
-guessed, never counted in the score, never blocking.
+guessed, and never counted in the score. An unresolved manual item keeps readiness at `REVIEW`;
+after the creator explicitly confirms it, all passing automated checks can resolve to
+`SPONSOR READY`.
 
 ### The parts that are harder than they look
 
@@ -202,7 +213,9 @@ guessed, never counted in the score, never blocking.
 - **A required phrase routinely straddles a Whisper segment break.** Matching per segment scores
   70.6 on `"shield mode"` split across two segments; matching the joined transcript scores 100.
   SponsorLint always matches the joined transcript and keeps an offset map to resolve a hit back to
-  its timestamp.
+  its timestamp. Fuzzy fallbacks must align to whole-token boundaries and may repair only an
+  adjacent-letter transposition: `sheild mode` passes, while `shield model`, `shield modes`, and
+  `shield mood` fail.
 - **Fuzzy matching is never used for numbers, URLs or promo codes.** Those are identifiers: either
   the campaign's or someone else's. `aegisvpn.com/alex` scores 82.4 against a spoken
   `aegis.com/alex` — under threshold, but by only 7.6 points, so it is matched by pattern, not by
@@ -211,6 +224,11 @@ guessed, never counted in the score, never blocking.
 - **`aegis vpn dot com slash alex`, `www.AegisVPN.com/Alex` and `aegisvpn.com/alex`** are the same
   URL. `H-A-R-S-H two zero` is `HARSH20` — and the promo-code path deliberately does *not* share the
   arithmetic number folder, which correctly turns "two zero" into `2`.
+- **A closing CTA is actually checked at the closing.** `URL_OR_CTA` supports a
+  `within_last_seconds` window. In the sample, the general campaign-URL rule can pass on any
+  occurrence while the closing-CTA rule requires another occurrence in the final 15 seconds.
+- **A negated disclosure is not a disclosure.** Narrow deterministic guards reject phrases such as
+  `not sponsored by`, `isn't sponsored by`, and `not a paid partnership`.
 
 ---
 
@@ -218,9 +236,9 @@ guessed, never counted in the score, never blocking.
 
 Written by us, not discovered by you.
 
-- **Audio and duration only.** No OCR, no logo detection, no visual verification of any kind. On-screen
-  requirements are surfaced as MANUAL REVIEW. That is a deliberate choice, not a missing feature —
-  a tool that refuses to fake a verdict is more useful than one that guesses.
+- **Audio and duration only.** No OCR, no logo detection, no visual verification of any kind.
+  On-screen requirements are surfaced for explicit human confirmation. An unresolved item produces
+  `REVIEW`; SponsorLint never claims the audio verifier checked it.
 - **Disclosure matching uses five fixed phrasings** (`sponsored by`, `this video is sponsored by`,
   `paid partnership`, `today's sponsor is`, `thanks to X for sponsoring`). A creator who says
   "this is sponsored content" *has* disclosed, and SponsorLint reports FAIL. That is the one miss in
@@ -251,8 +269,10 @@ python -m sponsorlint verify --spec S --transcript T
 python -m sponsorlint serve                      # the web UI
 python -m sponsorlint compile brief.pdf          # needs ANTHROPIC_API_KEY
 python -m sponsorlint transcribe cut.mp4         # needs faster-whisper + ffmpeg
-python -m sponsorlint analyze brief.pdf cut.mp4  # the full flow
 ```
+
+The browser is the canonical full workflow because its review screen enforces the trust boundary.
+There is intentionally no one-shot `analyze` command or `--yes` bypass.
 
 `verify` uses linter exit codes: `1` on a blocking failure, `0` otherwise.
 
@@ -269,9 +289,9 @@ pip install -r requirements.txt
 
 | Extra | Needed for | Notes |
 |---|---|---|
-| `ANTHROPIC_API_KEY` | `compile`, `analyze` | The compiler uses `claude-opus-5` with structured outputs. |
-| `faster-whisper` | `transcribe`, `analyze` | `base.en` on CPU. First run downloads ~140 MB. |
-| `ffmpeg` on PATH | `transcribe`, `analyze` | Duration is written into the transcript at transcribe time, which is why the demo path needs no ffmpeg. |
+| `ANTHROPIC_API_KEY` | `compile` and browser compilation | The compiler uses `claude-opus-5` with structured outputs. |
+| `faster-whisper` | `transcribe` and browser video upload | `base.en` on CPU. First run downloads ~140 MB. |
+| `ffmpeg` on PATH | `transcribe` and browser video upload | Duration is written into the transcript at transcribe time, which is why the demo path needs no ffmpeg. |
 
 ## Layout
 
@@ -287,7 +307,7 @@ sponsorlint/
 ├── report/              ANSI terminal · web template context
 └── web/                 FastAPI + Jinja2 + vanilla JS, no build step
 samples/                 the committed Aegis VPN campaign
-tests/                   111 tests, ~1.7s
+tests/                   130 collected tests
 ```
 
 The brand, campaign, URL and promo code used by the project are fictional.

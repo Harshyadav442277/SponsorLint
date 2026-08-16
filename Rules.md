@@ -95,7 +95,7 @@ Every error either surfaces a readable message or routes to `MANUAL REVIEW`.
 | PDF unparseable | `"Could not extract readable text from the brief."` Offer a paste-text fallback |
 | Compiler returns malformed JSON | Pydantic validation, **one** retry, then surface the error. Do not loop |
 | Compiler is uncertain about a rule | Emit the rule with `needs_review: true`. Never fake certainty |
-| Requirement not verifiable from audio/duration | Return it in `manual_review`. **Never drop it. Never guess it** |
+| Requirement not verifiable from audio/duration | Return it in `manual_review`. **Never drop it. Never guess it.** Keep readiness at `REVIEW` until a human explicitly confirms it |
 | Whisper fails | `"Could not transcribe the sponsor segment."` **Do not silently continue** |
 | Whisper output is questionable | Show the transcript evidence. Ambiguity → `MANUAL REVIEW` |
 | `ffprobe` missing or fails | Clear message naming ffmpeg as the missing dependency |

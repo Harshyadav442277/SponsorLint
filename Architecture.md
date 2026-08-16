@@ -165,7 +165,7 @@ sponsorlint/
 │   │
 │   ├── eval/
 │   │   ├── runner.py
-│   │   └── fixtures.json     24–30 labeled cases
+│   │   └── fixtures.json     39 labeled cases
 │   │
 │   └── web/
 │       ├── app.py            FastAPI routes
@@ -241,6 +241,7 @@ class Rule(BaseModel):
     min_seconds: float | None = None       # DURATION
     max_seconds: float | None = None       # DURATION
     within_first_seconds: float | None = None   # MUST_DISCLOSE placement
+    within_last_seconds: float | None = None    # URL_OR_CTA placement
 ```
 
 | Type | Populated fields | Semantics |
@@ -248,7 +249,7 @@ class Rule(BaseModel):
 | `MUST_SAY` | `phrases: [str, ...]` | PASS if **any** phrase occurs |
 | `MUST_NOT_SAY` | `phrases: [str, ...]` | PASS only if **none** occur. One brief sentence prohibiting N phrases compiles to **one rule with N phrases**, sharing one `source_quote` |
 | `EXACT_VALUE` | `expected: str` | membership test, §5.1 |
-| `URL_OR_CTA` | `expected: str` | canonicalized, §5.1 |
+| `URL_OR_CTA` | `expected: str`, optional `within_last_seconds` | canonicalized; a placement window makes a closing CTA distinct from a URL spoken anywhere, §5.1 |
 | `MUST_DISCLOSE` | `within_first_seconds: float \| null` | accepted disclosure phrases are a module constant in `lint/disclosure.py`, **not** a rule field — the compiler never emits them |
 | `DURATION` | `min_seconds`, `max_seconds` (either may be null) | `expected` omitted |
 
@@ -263,7 +264,8 @@ class Rule(BaseModel):
   "manual_review": [
     {
       "source_quote": "The product interface should be visible on screen for at least five seconds.",
-      "reason": "Visual requirement — not verifiable from audio or duration."
+      "reason": "Visual requirement — not verifiable from audio or duration.",
+      "confirmed": false
     }
   ]
 }
@@ -308,8 +310,8 @@ Every failure answers five questions: **what was required · what was detected �
 
 ```json
 {
-  "status": "FAIL",
-  "summary": { "pass": 4, "warn": 0, "fail": 3, "manual_review": 1 },
+  "status": "DO_NOT_SEND",
+  "summary": { "pass": 4, "warn": 0, "fail": 3, "manual_review": 0, "manual_confirmed": 1 },
   "results": [ /* Result[] */ ],
   "manual_review": [ /* ManualReviewItem[] */ ]
 }
@@ -487,23 +489,25 @@ report presence + timestamp only. Optional advisory, never a verdict:
 
 ## 5.5 Readiness resolution
 
-Three mutually exclusive clauses. **Manual-review items appear in none of them.**
+Three mutually exclusive clauses. Manual uncertainty must be resolved explicitly.
 
 ```
 any error-severity rule FAILS                       → DO NOT SEND
 
 no error-severity failure, but at least one
-  warning-severity rule FAILS                       → REVIEW
+  warning-severity rule FAILS, validator returns
+  MANUAL_REVIEW, or manual item is unconfirmed      → REVIEW
 
 all error-severity rules pass and no
-  warning-severity rule failed                      → SPONSOR READY
+  warning failed; every manual item confirmed       → SPONSOR READY
 ```
 
-`MANUAL REVIEW` items are excluded from the score, listed separately, and **never affect the readiness state** — not `REVIEW`, not `SPONSOR READY`.
+`MANUAL REVIEW` items are excluded from the automated score and always listed. The creator can
+explicitly confirm an external check; until then, SponsorLint says `REVIEW` rather than claiming
+automation verified something it cannot observe.
 
-> **Why this is stated three times:** the demo brief *always* yields exactly one manual-review item (the on-screen visual requirement), and it survives every re-record. Any rule that lets a manual-review item reach `REVIEW` makes V3 resolve `REVIEW` **forever** — killing the payoff frame of the README GIF, `PRD.md` §6 test 19, and GATE 25:00. That failure would surface at T+23:30 during GIF capture, look like a logic bug rather than a spec bug, and there would be no time to re-record.
-
-All seven demo rules are `severity: error`, so the demo never produces a `REVIEW` at all: V1 is `DO NOT SEND`, V3 is `SPONSOR READY`.
+All seven demo rules are `severity: error`. The committed approved sample records the visual item
+as manually confirmed, so V1 is `DO NOT SEND` and V3 is `SPONSOR READY`.
 
 ### On the score
 
@@ -580,9 +584,6 @@ python -m sponsorlint transcribe cut.mp4
 python -m sponsorlint compile brief.pdf
 # PDF + LLM → proposed spec
 
-python -m sponsorlint analyze brief.pdf cut.mp4
-# the full flow
-
 python -m sponsorlint eval
 # validator metrics
 ```
@@ -602,7 +603,7 @@ GET  /api/sample              load the committed demo campaign
 
 # 7. Eval harness
 
-**24–30 pure-text fixtures. No video. No Whisper. No API calls. Runs in under a second.**
+**39 pure-text fixtures. No video. No Whisper. No API calls. Runs in under a second.**
 
 Fixtures are `(rule, transcript_snippet, expected_verdict)` tuples in `sponsorlint/eval/fixtures.json`. They are the same assertions as the unit tests — **write each one once, use it twice.**
 
@@ -675,7 +676,8 @@ Two walls kill you with an async judge, and both are on the default path unless 
 ## Deliverable
 
 ```bash
-git clone <repo> && cd sponsorlint
+git clone https://github.com/Harshyadav442277/social-media-automation.git
+cd social-media-automation
 pip install -r requirements-demo.txt
 python -m sponsorlint demo
 ```

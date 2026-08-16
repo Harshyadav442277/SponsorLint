@@ -110,8 +110,8 @@ BEFORE sending it to the sponsor      ← the product lives here
 | State | Meaning |
 |---|---|
 | `DO NOT SEND` | A blocking requirement failed |
-| `REVIEW` | No blocking failure, but a non-blocking (warning-severity) requirement failed. **Manual-review items never cause `REVIEW`** |
-| `SPONSOR READY` | All blocking requirements passed |
+| `REVIEW` | No blocking failure, but a warning failed or a manual item remains unresolved |
+| `SPONSOR READY` | All automated requirements passed and every manual item was explicitly confirmed |
 
 A percentage score is optional and secondary. **The binary state is what matters.**
 
@@ -142,7 +142,7 @@ The recorded segment is transcribed with timestamps. Segment-level timestamps ar
 | `URL_OR_CTA` | The tracked URL, promo code, or CTA is spoken |
 
 ### F5 · Manual review
-Requirements that cannot be verified from audio or duration are surfaced as `MANUAL REVIEW` — never dropped, never guessed. Excluded from the score, always visible, never blocking.
+Requirements that cannot be verified from audio or duration are surfaced as `MANUAL REVIEW` — never dropped, never guessed. Excluded from the automated score and always visible. They keep readiness at `REVIEW` until the creator explicitly confirms them.
 
 ### The check surface — count it this way
 
@@ -158,7 +158,7 @@ Requirements that cannot be verified from audio or duration are surfaced as `MAN
 Every finding answers five questions: **what was required · what was detected · where · what evidence · where did the requirement come from.**
 
 ### F7 · Eval harness
-`python -m sponsorlint eval` runs the validators over 24–30 labeled text fixtures and reports real accuracy, false FAILs, and false PASSes. **This is a required feature, not a stretch goal.**
+`python -m sponsorlint eval` runs the validators over 39 labeled text fixtures and reports real accuracy, false FAILs, and false PASSes. **This is a required feature, not a stretch goal.**
 
 ### F8 · Zero-key demo
 `python -m sponsorlint demo` runs the real verifier against committed fixtures with no API key, no network, and no model download.
@@ -232,7 +232,7 @@ The brief does not decompose unambiguously. Two readings give 7 and two give 8, 
 | `r4` | `URL_OR_CTA` | `expected: "aegisvpn.com/alex"` | error | "should be directed to aegisvpn.com/alex" |
 | `r5` | `MUST_SAY` | `phrases: ["Shield Mode"]` | error | "mention Shield Mode by name at least once" |
 | `r6` | `MUST_NOT_SAY` | `phrases: ["completely anonymous", "unhackable"]` | error | "Avoid describing Aegis VPN as …" |
-| `r7` | `URL_OR_CTA` | `expected: "aegisvpn.com/alex"` | error | "The closing should include a direct call to action" |
+| `r7` | `URL_OR_CTA` | `expected: "aegisvpn.com/alex", within_last_seconds: 15` | error | "The closing should include a direct call to action" |
 | — | manual review | — | — | "product interface should be visible on screen for at least five seconds" |
 
 **The two decompositions that matter, and why:**
@@ -247,7 +247,7 @@ The brief does not decompose unambiguously. Two readings give 7 and two give 8, 
 V1 fails `r3` (says "seventy percent"), `r5` (never says "Shield Mode"), `r6` (says "completely anonymous"). Everything else passes.
 
 ```
-3 FAIL · 0 WARN · 4 PASS · 1 MANUAL REVIEW   →   4/7   →   DO NOT SEND
+3 FAIL · 0 WARN · 4 PASS · 1 MANUAL CONFIRMED   →   4/7   →   DO NOT SEND
 V3: 7/7 → SPONSOR READY
 ```
 
@@ -304,7 +304,7 @@ The MVP is complete only when **all** pass.
 | 8 | Sponsorship disclosure detected with timestamp |
 | 9 | `ffprobe` duration validation works |
 | 10 | Realistic prose brief compiles to valid schema |
-| 11 | Every compiled rule carries a `source_quote` |
+| 11 | Every compiled rule carries a `source_quote` that is verified against the submitted brief |
 | 12 | Unverifiable requirements surface as `MANUAL REVIEW`, not dropped |
 | 13 | User can edit / add / delete rules |
 | 14 | **Edited spec changes the real verdict** (change 73% → 70%, verdict flips) |
@@ -312,7 +312,7 @@ The MVP is complete only when **all** pass.
 | 16 | `python -m sponsorlint eval` reports actual metrics |
 | 17 | `python -m sponsorlint demo` works from a clean clone with no LLM credentials, no model download, and **no ffmpeg on PATH** |
 | 18 | Every failure shows expected / detected / timestamp / evidence / source quote |
-| 19 | Blocking failure → `DO NOT SEND`; all blocking passing → `SPONSOR READY` |
+| 19 | Blocking failure → `DO NOT SEND`; unresolved manual → `REVIEW`; all requirements resolved → `SPONSOR READY` |
 | 20 | **No hardcoded verdicts anywhere.** Every result is computed |
 
 **When these pass, stop adding features.** Test, polish, write the README, submit.
@@ -336,7 +336,7 @@ The event is repo + README + optional video. Assume no live demo. A judge clones
 
 README opening line:
 
-> **Every other tool generates content. This one checks it.**
+> **A sponsor brief is a contract. SponsorLint makes it executable.**
 
 Then:
 

@@ -107,7 +107,7 @@ Most social-media automation tools **generate** something. SponsorLint **checks*
 
 README opening line:
 
-> **Every other tool generates content. This one checks it.**
+> **A sponsor brief is a contract. SponsorLint makes it executable.**
 
 Then:
 
@@ -485,7 +485,9 @@ Every other AI submission at this event is an oracle. Yours has a spec the user 
 
 Unless a reliable validator exists, output **`MANUAL REVIEW`**. Never let the LLM invent confidence.
 
-`MANUAL REVIEW` items are excluded from the score, listed separately, and never block `SPONSOR READY` — but they are always visible.
+`MANUAL REVIEW` items are excluded from the automated score and always visible. They keep readiness
+at `REVIEW` until the creator explicitly confirms the external check; only resolved requirements
+can reach `SPONSOR READY`.
 
 This is a **trust feature**, not a limitation. A tool that refuses to fake a verdict is demonstrating judgment, and judgment is what Technical execution measures.
 
@@ -592,7 +594,6 @@ sponsorlint demo                                   # zero-key, cached fixtures, 
 sponsorlint verify --spec S.json --transcript T.json   # deterministic checks only
 sponsorlint transcribe cut.mp4                     # Whisper → transcript JSON
 sponsorlint compile brief.pdf                      # PDF + LLM → proposed spec
-sponsorlint analyze brief.pdf cut.mp4              # the full flow
 sponsorlint eval                                   # validator metrics
 ```
 
@@ -600,7 +601,7 @@ sponsorlint eval                                   # validator metrics
 
 # 16. THE EVAL HARNESS — CORE, NOT STRETCH
 
-**24–30 pure-text fixtures. No video. No Whisper. No API calls. Runs in under a second.**
+**39 pure-text fixtures. No video. No Whisper. No API calls. Runs in under a second.**
 
 This is the single highest-leverage feature in the build, and almost no submission in the field will have one.
 
@@ -673,7 +674,8 @@ Two walls kill you with an async judge, and both are on the default path unless 
 ## The deliverable
 
 ```bash
-git clone <repo> && cd sponsorlint
+git clone https://github.com/Harshyadav442277/social-media-automation.git
+cd social-media-automation
 pip install -r requirements-demo.txt
 python -m sponsorlint demo
 ```
@@ -826,7 +828,7 @@ In order: `MUST_SAY` → `MUST_NOT_SAY` → `EXACT_VALUE` → `MUST_DISCLOSE` �
 ---
 
 ### `T+3:15 – 5:15` · PHASE 3 — Normalization depth + eval harness
-Numbers, currency, URLs, promo codes. Then 24–30 fixtures and `sponsorlint eval`.
+Numbers, currency, URLs, promo codes. Then 39 fixtures and `sponsorlint eval`.
 
 > **GATE 5:15** — real metrics printed. No hardcoded score. False FAILs and false PASSes both visible.
 
@@ -915,7 +917,7 @@ Complete only when all pass.
 16. `sponsorlint eval` reports actual metrics
 17. `sponsorlint demo` works without LLM credentials or a model download
 18. Every failure shows expected / detected / timestamp / evidence / source quote
-19. Blocking failure produces `DO NOT SEND`; all blocking passing produces `SPONSOR READY`
+19. Blocking failure produces `DO NOT SEND`; unresolved manual work produces `REVIEW`; all requirements resolved produces `SPONSOR READY`
 20. **No hardcoded verdicts anywhere.** Every result is computed
 
 **If these pass, stop adding features.**
@@ -926,7 +928,7 @@ Complete only when all pass.
 
 The video is optional. This is the deliverable. Write it in judging order, not build order.
 
-1. **Category line + GIF.** *"Every other tool generates content. This one checks it."* The GIF is `DO NOT SEND → SPONSOR READY`, six seconds, no narration.
+1. **Category line + GIF.** *"A sponsor brief is a contract. SponsorLint makes it executable."* The GIF is `DO NOT SEND → SPONSOR READY`, six seconds, no narration.
 2. **The problem**, one paragraph, from a creator's mouth. Concrete cost: another approval round, delayed payment.
 3. **Input / output block.**
 4. **60-second quickstart** — clone, install, `demo`. **State the zero-keys fact explicitly**; it's a promise most repos break.

@@ -149,7 +149,7 @@ The largest element on the report. Three states, each with icon + word + color.
 ```
 ┌─────────────────────────────────────────────────────────┐
 │  ✕   DO NOT SEND                                        │   fail
-│      3 failed · 4 passed · 1 manual review              │
+│      3 failed · 4 passed · 1 manual confirmed           │
 └─────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────┐
@@ -249,12 +249,13 @@ Visually distinct from the three verdicts — this is not a pass or a failure.
 │ ▎ "The product interface should be visible on screen for at  │
 │ ▎  least five seconds during the segment."                   │
 │ ▎                                                            │
-│ ▎ SponsorLint does not verify visual requirements. Check     │
-│ ▎ this one yourself before sending.                          │
+│ ▎ SponsorLint does not verify visual requirements.           │
+│ ▎ ☐ Confirmed manually                                      │
 └──────────────────────────────────────────────────────────────┘
 ```
 
-Dashed left stripe in `--manual`. Never counted in the score. Never blocks `SPONSOR READY`.
+Dashed left stripe in `--manual`. Never counted in the automated score. Unresolved items keep the
+verdict at `REVIEW`; checking **Confirmed manually** records the human resolution.
 
 ## 5.6 Progress
 
@@ -334,7 +335,7 @@ SponsorLint — samples/sponsor-cut-v1.mp4
         "The product interface should be visible for five seconds."
 
   ────────────────────────────────────────────────────────────
-  3 failed · 4 passed · 1 manual review
+  3 failed · 4 passed · 1 manual confirmed
 
   DO NOT SEND
 ```

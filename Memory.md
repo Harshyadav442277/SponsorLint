@@ -29,21 +29,29 @@ This file exists so a fresh agent — new chat, new tool, new context window —
 ## Current state
 
 ```
-Phase:            10 complete in code. External gates need a recording and API key.
-Last gate passed: Full dependency install + base.en CPU initialization
-Clock:            built and hardened across four sessions, Aug 16 2026
+Phase:            Post-audit hardening complete in code. External proof gates remain.
+Last gate passed: 129 passed + 1 intentional xfail; 39-fixture eval at 97.4%
+Clock:            built and hardened across five sessions, Aug 16 2026
 Submittable:      YES — Phase 4 gate and canonical browser arc verified
 ```
 
 **What works, verified by running it:**
 
-- `python -m sponsorlint demo` → `3 FAIL · 0 WARN · 4 PASS · 1 MANUAL` → `4/7` → `DO NOT SEND`
+- `python -m sponsorlint demo` → `3 FAIL · 0 WARN · 4 PASS · 1 MANUAL CONFIRMED` → `4/7` → `DO NOT SEND`
 - `python -m sponsorlint demo --arc` → `V1 4/7 DO NOT SEND` → `V3 7/7 SPONSOR READY`
-- `python -m sponsorlint eval` → 30 fixtures, 29 correct, **96.7%**, 0 False PASSes, 1 False FAIL
-- `python -m pytest tests -q` → **111 passed, 1 xfailed** in ~1.7s
+- `python -m sponsorlint eval` → 39 fixtures, 38 correct, **97.4%**, 0 False PASSes, 1 False FAIL
+- `python -m pytest tests -q` → **129 passed, 1 xfailed** in 0.78s
 - `python -m sponsorlint serve` → full four-screen flow drives end to end in a browser
 - All six validators, the engine, normalization, the eval harness, the terminal report
-- `compile` / `transcribe` / `analyze` are written but **not exercised live** (no key, no video)
+- `compile` / `transcribe` are written but **not exercised live** (no key, no video)
+- Compiler citations are whitespace-normalized and grounded against literal brief text; invented
+  rule or manual-item quotes are retried once, then rejected
+- Manual items require explicit confirmation; unresolved items and validator exceptions produce
+  `REVIEW`, while the confirmed sample can still reach `SPONSOR READY`
+- Closing CTA uses `within_last_seconds: 15`; negated disclosures and fuzzy prefix/near-word false
+  passes have adversarial regression coverage
+- GitHub Actions workflow covers Python 3.11–3.13, zero-key demo, eval, and tests; it requires a push
+  before GitHub can report a green run
 
 **Verified in fresh `.venv-current` on Windows (full development dependencies):**
 
@@ -70,7 +78,7 @@ from `samples/script.md`, then follow the candidate-transcript commands in
 | 0 | Brief + V1 exist; Whisper hears the planted errors | ☐ **brief/script/PDF exist; V1 not recorded** |
 | 1 | One command → one real verdict from cached transcript | ☑ |
 | 2 | All six validators produce verdicts on V1 | ☑ |
-| 3 | `eval` prints real metrics, no hardcoded score | ☑ 96.7% |
+| 3 | `eval` prints real metrics, no hardcoded score | ☑ 97.4% |
 | **4** | **Fresh clone → `demo` → real output, no key** ← **SUBMITTABLE** | ☑ verified in `.venv-judge` |
 | 5 | Prose brief → correct spec, `min_seconds: 60` extracted | ☐ **code complete, no live API call made** |
 | 6 | Editing `73%` → `70%` flips the real verdict | ☑ verified in the browser and in `tests/test_engine.py` |
@@ -97,15 +105,15 @@ Mirrors `PRD.md` §6. Check off only when actually verified, not when believed.
 ☑  8  Disclosure detected with timestamp
 ☑  9  DURATION reads transcript.duration_seconds (validator never shells out)
 ☐ 10  Prose brief compiles to valid schema     — needs one live API call
-☑ 11  Every rule carries source_quote          (enforced in models.py, rejected without)
-☑ 12  Unverifiable requirements → MANUAL REVIEW
+☑ 11  Every compiler quote is grounded in brief (rules + manual items; retry then reject)
+☑ 12  Unverifiable requirements → MANUAL REVIEW → explicit human confirmation
 ☑ 13  User can edit / add / delete rules
 ☑ 14  Edited spec changes the real verdict     (browser + test_engine.py)
 ☐ 15  Fresh MP4 transcribed and verified       — needs the recording
 ☑ 16  eval reports actual metrics
 ☑ 17  demo works with no credentials, no download, no ffmpeg
 ☑ 18  Every failure shows expected/detected/timestamp/evidence/source
-☑ 19  Readiness states resolve correctly       (all three, plus manual-review isolation)
+☑ 19  Readiness states resolve correctly       (unresolved manual/validator error → REVIEW)
 ☑ 20  No hardcoded verdicts anywhere
 ```
 
@@ -121,13 +129,13 @@ Pinned so nobody has to re-derive them.
 |---|---|
 | Fictional brand | `Aegis VPN` · `aegisvpn.com/alex` · `Shield Mode` · `73%` · `HARSH20` |
 | Planted errors in V1 | "seventy percent" (0:43) · no "Shield Mode" · "completely anonymous" (0:31) |
-| Expected V1 verdict | 3 FAIL · 0 WARN · 4 PASS · 1 MANUAL → `4/7` → `DO NOT SEND` |
+| Expected V1 verdict | 3 FAIL · 0 WARN · 4 PASS · 1 MANUAL CONFIRMED → `4/7` → `DO NOT SEND` |
 | Transcript fixture | `samples/transcript.v1.json` — **cached, never re-run Whisper in dev** |
 | Whisper config | `faster-whisper`, `base.en`, **CPU only, no GPU path** |
-| Fuzzy scorer | `rapidfuzz.fuzz.partial_ratio` >= 90 on the **joined** transcript. Never `ratio`, never `partial_token_set_ratio` |
+| Fuzzy scorer | `rapidfuzz.fuzz.partial_ratio` >= 90 over whole-token windows; required mentions repair adjacent transpositions only |
 | Canonical spec | 7 rules, all `severity: error` — see `PRD.md` §5 |
 | Demo command | `python -m sponsorlint demo` — no key, no download, run from repo root |
-| Real eval number | **96.7%** · 30 fixtures · 0 False PASSes · 1 False FAIL (documented limitation) |
+| Real eval number | **97.4%** · 39 fixtures · 0 False PASSes · 1 False FAIL (documented limitation) |
 | Never cut | eval number · zero-key demo · README |
 
 ### Measured values, so nobody re-litigates them
@@ -146,6 +154,22 @@ Pinned so nobody has to re-derive them.
 ## Session log
 
 *Newest first. One block per working session.*
+
+### Session 5 — adversarial critique implementation · Aug 16, 2026
+
+- Closed `MUST_SAY` false passes for `Shield Model`, `Shield Modes`, `Shield Mood`, and same-length
+  substitutions while preserving the measured `Sheild Mode` transcription typo
+- Rejected negated/counterfactual disclosure phrases and added adversarial fixtures
+- Made closing CTA placement executable with `within_last_seconds: 15`
+- Added explicit manual confirmation and changed unresolved uncertainty to `REVIEW`
+- Grounded every compiler-provided source quote against the literal submitted brief
+- Removed the one-shot `analyze --yes` trust-boundary bypass and stopped custom briefs inheriting
+  Aegis sample takes in the browser
+- Expanded eval to 39 fixtures: **97.4%**, **0 False PASSes**, 1 documented False FAIL
+- Added Python 3.11–3.13 CI, corrected `httpx2` to `httpx`, and made ASGI tests deterministic across
+  current Starlette/AnyIO by avoiding the hanging synchronous test portal
+- Updated README positioning, clone command, trust claims, metrics, and project documentation
+- Final local gate: **129 passed, 1 intentional xfail**; demo arc and JavaScript syntax verified
 
 ### Session 4 — real-input preflight · Aug 16, 2026
 
@@ -248,12 +272,13 @@ Every validator, the eval and the demo run for real against them; only the *prov
 text is different. Flagged in `samples/README.md` and in the README limitations. **Regenerate both
 with `transcribe` once the takes exist** — nothing else changes.
 
-**D-2 · Eval fixture set rebalanced, count held at 30.** The first 30 scored 30/30, which measures
+**D-2 · Eval fixture set rebalanced, then expanded to 39.** The first 30 scored 30/30, which measures
 the fixtures rather than the tool. Dropped six weak cases (`must_say/exact`,
 `must_say/case-and-punctuation`, `must_not_say/negated-still-spoken`,
 `exact_value/spelled-out-unhyphenated`, `url_or_cta/mixed-case`, `duration/inside-window`) and
 added six harder ones, including one **deliberate known-limitation case labeled by ground truth**
-that produces a real False FAIL. Count stays inside the documented 24–30 band.
+that produces a real False FAIL. The adversarial audit later added nine false-pass and placement
+cases, bringing the published set to 39 and the measured result to 97.4%.
 
 **D-3 · `URL_OR_CTA` does not fuzzy-match URLs or promo codes.** `Architecture.md` §5.3 says
 "canonicalize both sides, then containment"; it does not forbid a fuzzy fallback, and my first

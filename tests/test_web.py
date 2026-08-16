@@ -2,6 +2,9 @@
 
 import asyncio
 import importlib
+import json
+import threading
+import time
 
 import httpx
 import pytest
@@ -190,3 +193,104 @@ def test_process_local_state_is_bounded(monkeypatch):
     web_app._remember(values, "middle", 2)
     web_app._remember(values, "newest", 3)
     assert values == {"middle": 2, "newest": 3}
+
+
+async def _responsive_during_transcription_scenario(tmp_path, monkeypatch):
+    SPECS.clear()
+    REPORTS.clear()
+    REPORT_TRANSCRIPTS.clear()
+    monkeypatch.setattr(web_app, "UPLOADS", tmp_path)
+
+    transcribe_module = importlib.import_module("sponsorlint.transcript.transcribe")
+    started = threading.Event()
+    release = threading.Event()
+
+    def slow_transcribe(_path):
+        started.set()
+        assert release.wait(timeout=3)
+        return web_app._load_take("v1")
+
+    monkeypatch.setattr(transcribe_module, "transcribe", slow_transcribe)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        sample = (await client.get("/api/sample")).json()
+        approval = await client.post("/api/spec/approve", json={"spec": sample["spec"]})
+        spec_id = approval.json()["spec_id"]
+
+        first = asyncio.create_task(client.post(
+            "/api/verify",
+            data={"spec_id": spec_id},
+            files={"video": ("first.mp4", b"media", "video/mp4")},
+        ))
+        for _ in range(100):
+            if started.is_set():
+                break
+            await asyncio.sleep(0.01)
+        assert started.is_set()
+
+        began = time.perf_counter()
+        health = await client.get("/healthz")
+        health_latency = time.perf_counter() - began
+        assert health.status_code == 200
+        assert health_latency < 0.5
+
+        began = time.perf_counter()
+        sample_during_transcription = await client.get("/api/sample")
+        sample_latency = time.perf_counter() - began
+        assert sample_during_transcription.status_code == 200
+        assert sample_latency < 0.5
+
+        second = await client.post(
+            "/api/verify",
+            data={"spec_id": spec_id},
+            files={"video": ("second.mp4", b"media", "video/mp4")},
+        )
+        assert second.status_code == 503
+        assert second.headers["retry-after"] == "60"
+        assert "already running" in second.json()["detail"]
+
+        release.set()
+        assert (await first).status_code == 200
+
+
+def test_health_and_sample_remain_responsive_during_one_transcription(tmp_path, monkeypatch):
+    asyncio.run(_responsive_during_transcription_scenario(tmp_path, monkeypatch))
+
+
+async def _responsive_during_compile_scenario(monkeypatch):
+    compile_module = importlib.import_module("sponsorlint.brief.compile")
+    started = threading.Event()
+    release = threading.Event()
+
+    def slow_compile(_brief_text):
+        started.set()
+        assert release.wait(timeout=3)
+        spec_data = json.loads(
+            (web_app.SAMPLES / "spec.approved.json").read_text(encoding="utf-8")
+        )
+        return web_app.Spec.model_validate(spec_data)
+
+    monkeypatch.setattr(compile_module, "compile_brief", slow_compile)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        compiling = asyncio.create_task(client.post(
+            "/api/compile",
+            data={"text": "Mention the approved sponsor requirements."},
+        ))
+        for _ in range(100):
+            if started.is_set():
+                break
+            await asyncio.sleep(0.01)
+        assert started.is_set()
+
+        began = time.perf_counter()
+        health = await client.get("/healthz")
+        assert health.status_code == 200
+        assert time.perf_counter() - began < 0.5
+
+        release.set()
+        assert (await compiling).status_code == 200
+
+
+def test_health_remains_responsive_during_blocking_compile(monkeypatch):
+    asyncio.run(_responsive_during_compile_scenario(monkeypatch))

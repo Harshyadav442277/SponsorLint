@@ -10,7 +10,9 @@ layer — no database (Rules.md §1.9).
 
 from __future__ import annotations
 
+import asyncio
 import json
+import logging
 import uuid
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -20,6 +22,7 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import ValidationError
+from starlette.concurrency import run_in_threadpool
 
 from ..lint.engine import run
 from ..models import Spec, SpecError, Transcript
@@ -37,6 +40,10 @@ MEDIA_SUFFIXES = frozenset({
     ".aac", ".flac", ".m4a", ".m4v", ".mkv", ".mov", ".mp3", ".mp4",
     ".ogg", ".wav", ".webm",
 })
+TRANSCRIPTION_SLOT_WAIT_SECONDS = 0.1
+
+LOGGER = logging.getLogger("uvicorn.error")
+TRANSCRIPTION_LOCK = asyncio.Lock()
 
 app = FastAPI(title="SponsorLint", docs_url=None, redoc_url=None)
 app.mount("/static", StaticFiles(directory=HERE / "static"), name="static")
@@ -134,7 +141,7 @@ async def compile_route(brief: UploadFile | None = None, text: str = Form("")):
             label="brief",
         )
         try:
-            brief_text = extract_text(target)
+            brief_text = await run_in_threadpool(extract_text, target)
         except ExtractError as exc:
             raise HTTPException(400, str(exc)) from exc
         finally:
@@ -144,7 +151,7 @@ async def compile_route(brief: UploadFile | None = None, text: str = Form("")):
         raise HTTPException(400, "No brief supplied. Upload a PDF or paste the brief text.")
 
     try:
-        spec = compile_brief(brief_text)
+        spec = await run_in_threadpool(compile_brief, brief_text)
     except CompileError as exc:
         raise HTTPException(502, str(exc)) from exc
 
@@ -207,7 +214,9 @@ async def verify(
         raise HTTPException(400, "Choose a recorded take or upload a video file.")
 
     try:
-        report = run(spec, transcript)
+        LOGGER.info("verifier started")
+        report = await run_in_threadpool(run, spec, transcript)
+        LOGGER.info("verifier completed")
     except SpecError as exc:
         raise HTTPException(400, str(exc)) from exc
 
@@ -234,8 +243,26 @@ async def _transcribe_upload(video: UploadFile) -> Transcript:
         max_bytes=MAX_MEDIA_BYTES,
         label="media",
     )
+    LOGGER.info("media upload saved")
     try:
-        return transcribe(target)
+        try:
+            await asyncio.wait_for(
+                TRANSCRIPTION_LOCK.acquire(),
+                timeout=TRANSCRIPTION_SLOT_WAIT_SECONDS,
+            )
+        except TimeoutError as exc:
+            raise HTTPException(
+                503,
+                "Another fresh transcription is already running. Try again in a few minutes, "
+                "or use the bundled V1/V3 campaign for the instant judge path.",
+                headers={"Retry-After": "60"},
+            ) from exc
+
+        try:
+            LOGGER.info("transcription slot acquired")
+            return await run_in_threadpool(transcribe, target)
+        finally:
+            TRANSCRIPTION_LOCK.release()
     except TranscribeError as exc:
         raise HTTPException(400, str(exc)) from exc
     finally:
@@ -324,7 +351,9 @@ async def confirm_manual(report_id: str, payload: dict):
 
     spec.manual_review[index].confirmed = True
     try:
-        report = run(spec, transcript)
+        LOGGER.info("verifier started")
+        report = await run_in_threadpool(run, spec, transcript)
+        LOGGER.info("verifier completed")
     except SpecError as exc:
         raise HTTPException(400, str(exc)) from exc
 

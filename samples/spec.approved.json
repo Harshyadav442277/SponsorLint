@@ -1,10 +1,10 @@
 {
-  "campaign": "Aegis VPN Creator Campaign",
+  "campaign": "Aegis VPN - Q3 Acquisition",
   "rules": [
     {
       "id": "r1",
       "type": "MUST_DISCLOSE",
-      "label": "Sponsorship disclosure near the beginning",
+      "label": "Sponsorship Disclosure",
       "source_quote": "Please make clear near the beginning of the integration that this video is sponsored by Aegis VPN.",
       "severity": "error",
       "needs_review": false,
@@ -13,7 +13,7 @@
     {
       "id": "r2",
       "type": "DURATION",
-      "label": "Integration length",
+      "label": "Integration Length",
       "source_quote": "The integration should run no shorter than one minute and no longer than one minute and thirty seconds.",
       "severity": "error",
       "needs_review": false,
@@ -23,7 +23,7 @@
     {
       "id": "r3",
       "type": "EXACT_VALUE",
-      "label": "Campaign discount",
+      "label": "Savings Percentage",
       "source_quote": "viewers should be told that they can save seventy-three percent using the campaign offer",
       "severity": "error",
       "needs_review": false,
@@ -32,8 +32,8 @@
     {
       "id": "r4",
       "type": "URL_OR_CTA",
-      "label": "Campaign URL spoken",
-      "source_quote": "and should be directed to aegisvpn.com/alex",
+      "label": "Campaign URL",
+      "source_quote": "should be directed to aegisvpn.com/alex.",
       "severity": "error",
       "needs_review": false,
       "expected": "aegisvpn.com/alex"
@@ -41,7 +41,7 @@
     {
       "id": "r5",
       "type": "MUST_SAY",
-      "label": "Feature mention",
+      "label": "Feature Mention",
       "source_quote": "Please mention Shield Mode by name at least once.",
       "severity": "error",
       "needs_review": false,
@@ -50,7 +50,7 @@
     {
       "id": "r6",
       "type": "MUST_NOT_SAY",
-      "label": "Prohibited claims",
+      "label": "Prohibited Claims",
       "source_quote": "Avoid describing Aegis VPN as \"completely anonymous\" or \"unhackable.\"",
       "severity": "error",
       "needs_review": false,
@@ -59,7 +59,7 @@
     {
       "id": "r7",
       "type": "URL_OR_CTA",
-      "label": "Closing call to action",
+      "label": "Closing Call to Action",
       "source_quote": "The closing should include a direct call to action telling viewers to visit the campaign URL.",
       "severity": "error",
       "needs_review": false,
@@ -70,7 +70,7 @@
   "manual_review": [
     {
       "source_quote": "The product interface should be visible on screen for at least five seconds during the segment.",
-      "reason": "Visual requirement — not verifiable from audio or duration.",
+      "reason": "Visual requirement (product interface visibility) cannot be verified from audio or duration analysis.",
       "confirmed": false
     }
   ]

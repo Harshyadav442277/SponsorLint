@@ -41,12 +41,12 @@ def test_main_switches_legacy_windows_stdio_to_utf8(monkeypatch):
 
 
 def test_compile_setup_error_is_readable(monkeypatch, capsys):
-    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     brief = Path(__file__).resolve().parents[1] / "samples" / "brief.md"
 
     assert cli.main(["compile", str(brief)]) == 2
     error = capsys.readouterr().err
-    assert "ANTHROPIC_API_KEY is not set" in error
+    assert "GEMINI_API_KEY is not set" in error
     assert "Traceback" not in error
 
 

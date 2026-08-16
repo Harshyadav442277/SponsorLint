@@ -32,7 +32,7 @@ Only then add the surrounding machinery.
 - README with three things only: title, one-sentence pitch, input/output block.
 - Create **both** requirements files first, so the split is never an afterthought:
   - `requirements-demo.txt` → `fastapi uvicorn jinja2 pydantic rapidfuzz python-multipart`
-  - `requirements.txt` → the above **plus** `pypdf faster-whisper anthropic pytest`
+  - `requirements.txt` → the above **plus** `pypdf faster-whisper google-genai pytest`
 
 ```bash
 python -m venv .venv

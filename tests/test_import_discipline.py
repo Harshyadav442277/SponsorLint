@@ -14,7 +14,7 @@ import pytest
 PACKAGE = Path(__file__).resolve().parents[1] / "sponsorlint"
 
 #: Anything not in requirements-demo.txt.
-FULL_ONLY = ("faster_whisper", "pypdf", "anthropic", "openai", "torch")
+FULL_ONLY = ("faster_whisper", "pypdf", "google", "openai", "torch")
 
 #: Modules reachable from `demo`, `verify` and `eval`.
 DEMO_PATH = [

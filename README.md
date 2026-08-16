@@ -133,7 +133,7 @@ assertions the unit tests use — written once, used twice.
 
 ```bash
 python -m sponsorlint eval --verbose   # every case, pass or miss
-python -m pytest tests -q              # 202 passed, 1 intentional xfail
+python -m pytest tests -q              # 203 passed, 1 intentional xfail
 ```
 
 ---
@@ -168,6 +168,10 @@ approved specification.**
 The compiler also normalizes whitespace and verifies that every rule and manual-review
 `source_quote` literally occurs in the submitted brief. An invented citation is retried once and
 then rejected; it cannot become trusted provenance.
+
+The live requirement compiler was validated against `samples/brief.pdf` using the Gemini API with
+structured output. The proposed specification was schema-validated, source-grounded, and
+human-approved before deterministic verification. Model generation itself is not deterministic.
 
 That split is the whole design, and four properties fall out of it:
 
@@ -274,7 +278,7 @@ python -m sponsorlint demo --arc                 # DO NOT SEND → REVIEW
 python -m sponsorlint eval                       # validator metrics
 python -m sponsorlint verify --spec S --transcript T
 python -m sponsorlint serve                      # the web UI
-python -m sponsorlint compile brief.pdf          # needs ANTHROPIC_API_KEY
+python -m sponsorlint compile brief.pdf          # needs GEMINI_API_KEY
 python -m sponsorlint transcribe cut.mp4         # needs faster-whisper + ffmpeg
 ```
 
@@ -296,7 +300,7 @@ pip install -r requirements.txt
 
 | Extra | Needed for | Notes |
 |---|---|---|
-| `ANTHROPIC_API_KEY` | `compile` and browser compilation | The compiler uses `claude-opus-5` with structured outputs. |
+| `GEMINI_API_KEY` | `compile` and browser compilation | The compiler uses `gemini-3-flash-preview` with structured output through `google-genai`. |
 | `faster-whisper` | `transcribe` and browser video upload | `base.en` on CPU. First run downloads ~140 MB. |
 | `ffmpeg` on PATH | `transcribe` and browser video upload | Duration is written into the transcript at transcribe time, which is why the demo path needs no ffmpeg. |
 

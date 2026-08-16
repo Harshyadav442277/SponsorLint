@@ -293,13 +293,25 @@ quotes must literally occur in the submitted brief after whitespace normalizatio
 `analyze --yes` path is removed because it bypassed human approval. These are hardening changes to
 the existing trust architecture, not new product scope.
 
+## D23 · Gemini is the canonical hackathon compiler
+
+Aug 17, 2026. Anthropic billing was unavailable, so the single compiler provider changed to the
+official `google-genai` SDK with `gemini-3-flash-preview`, which Google documents as structured-output
+capable and available on the Gemini API free tier. This is a replacement, not a multi-provider
+abstraction: no registry, router, fallback chain, tools, search, or transcript access was added.
+
+The live `samples/brief.pdf` call returned seven rules and one manual item. The response passed the
+authoritative `Spec` model and literal quote grounding, then received explicit human approval with
+15-second opening and closing placement thresholds. The model proposes only; approval and the
+deterministic verifier remain unchanged.
+
 ---
 
 ## Open questions
 
 | Question | Owner | Resolve by |
 |---|---|---|
-| ~~Which LLM provider for the compiler~~ | — | **Resolved in D21** — `anthropic` / `claude-opus-5`, structured outputs, smoke-tested at T+0:25 |
+| ~~Which LLM provider for the compiler~~ | — | **Superseded by D23** — `google-genai` / `gemini-3-flash-preview`, live-tested and human-approved |
 | Whether the eval fixture count lands at 24 or 30 | — | Phase 3 |
 | Whether jump-to-timestamp survives the cut | — | Phase 8 |
 

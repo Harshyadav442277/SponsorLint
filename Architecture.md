@@ -566,7 +566,7 @@ Guard it with a check that runs in Phase 4:
 ```bash
 python -c "import ast,sys; m=ast.parse(open('sponsorlint/cli.py').read()); \
 bad=[n for n in ast.walk(m) if isinstance(n,(ast.Import,ast.ImportFrom)) and n.col_offset==0 \
-and any(x in ast.dump(n) for x in ('faster_whisper','pypdf','openai','anthropic'))]; \
+and any(x in ast.dump(n) for x in ('faster_whisper','pypdf','openai','google'))]; \
 sys.exit(len(bad))"
 ```
 
@@ -712,15 +712,24 @@ Before submission, run from a clean clone in a fresh virtualenv. The default dem
 ## Provider — decided, not deferred
 
 ```
-package:  anthropic
-model:    claude-opus-5
-mechanism: structured outputs — pass the Spec Pydantic model directly,
-           so the API constraint and Pydantic validation are the same schema
+package:  google-genai
+model:    gemini-3-flash-preview
+mechanism: structured output — send Spec.model_json_schema(), then validate
+           the returned structure with the authoritative Spec Pydantic model
 ```
 
 Do not use an assistant prefill to force JSON; structured outputs is the mechanism.
 
-**Pre-flight this at `T+0:00–0:15`, not at Phase 5.** One live smoke call returning a two-field object. Phases 5 and 6 are five hours of work plus acceptance tests 10–14 and GATE 12:00 — all resting on an external dependency. If the key is missing or out of credit, you want to know at minute ten, not hour seven. **If the smoke call fails, Phase 5 is cut and the committed hand-written spec carries the demo** — the zero-key path does not need the compiler at all.
+The installed SDK's direct `response_schema=Spec` translation was rejected live because it mapped
+Pydantic's `extra="forbid"` constraint to an unsupported OpenAPI field. The supported
+`response_json_schema` path preserves the JSON Schema constraint, and SponsorLint still validates
+the returned structure through `Spec.model_validate` before source grounding. SDK retries are
+disabled; SponsorLint permits at most one explicit retry.
+
+This path was validated live against `samples/brief.pdf` on Aug 17, 2026. The seven-rule proposal
+and one manual item passed schema validation and literal source grounding, then received explicit
+human approval with 15-second opening and closing placement thresholds. The zero-key path remains
+independent of the compiler.
 
 ## The prompt
 

@@ -30,9 +30,9 @@ This file exists so a fresh agent — new chat, new tool, new context window —
 
 ```
 Phase:            Core hardening complete; real audio pipeline proven; visual item unresolved.
-Last gate passed: 202 passed + 1 intentional xfail; 46-fixture eval at 97.8%
+Last gate passed: 203 passed + 1 intentional xfail; 46-fixture eval at 97.8%
 Clock:            built and hardened through Aug 17 2026
-Submittable:      REVIEW-READY — live API and manual visual proof gates open; not submission-frozen
+Submittable:      REVIEW-READY — live compiler proven; manual visual proof gate remains open
 ```
 
 **What works, verified by running it:**
@@ -40,11 +40,14 @@ Submittable:      REVIEW-READY — live API and manual visual proof gates open; 
 - `python -m sponsorlint demo` → `3 FAIL · 0 WARN · 4 PASS · 1 MANUAL PENDING` → `4/7` → `DO NOT SEND`
 - `python -m sponsorlint demo --arc` → `V1 4/7 DO NOT SEND` → `V3 7/7 REVIEW`
 - `python -m sponsorlint eval` → 46 fixtures, 45 correct, **97.8%**, 0 False PASSes, 1 False FAIL
-- `python -m pytest tests -q` → **202 passed, 1 xfailed**
+- `python -m pytest tests -q` → **203 passed, 1 xfailed**
 - `python -m sponsorlint serve` → full four-screen flow drives end to end in a browser
 - All six validators, the engine, normalization, the eval harness, the terminal report
 - `transcribe` has been exercised on real V1 and V3 MP4s with raw `faster-whisper` output; the
-  audio/ASR/verifier path is proven. `compile` still needs one live API call
+  audio/ASR/verifier path is proven
+- `compile` was exercised live against `samples/brief.pdf` with `google-genai 1.75.0` and
+  `gemini-3-flash-preview`; its seven-rule proposal and one manual item were schema-validated,
+  source-grounded, and human-approved with explicit 15-second placement thresholds
 - Compiler citations are whitespace-normalized and grounded against literal brief text; invented
   rule or manual-item quotes are retried once, then rejected
 - Manual items require explicit confirmation; unresolved items and validator exceptions produce
@@ -65,13 +68,13 @@ Submittable:      REVIEW-READY — live API and manual visual proof gates open; 
 - `demo --arc` renders Unicode terminal output under Windows without a CP-1252 crash
 - API regression test drives sample → approve → V1 → V3 → stored report
 - In-app browser drives all four screens to both canonical verdicts with no console warnings/errors
-- AST scan still finds zero module-scope `faster_whisper` / `pypdf` / `anthropic` / `torch` imports on the demo path
-- `faster-whisper` and `anthropic` install cleanly; `base.en` is downloaded, cached, and initializes on CPU with `int8`
+- AST scan still finds zero module-scope `faster_whisper` / `pypdf` / `google` / `torch` imports on the demo path
+- `faster-whisper` and `google-genai` install cleanly; `base.en` is downloaded, cached, and initializes on CPU with `int8`
 - Missing-key and missing-video failures are readable CLI errors with exit code 2, not tracebacks
 - The earlier `.venv-judge` no-ffmpeg reproduction remains historical evidence; its Python 3.12 base was removed from this machine, so its launcher is now stale
 
-**Next action:** run one live compiler call. If the visual gate is ever closed, replace the static
-logo media with a genuine product-interface view before setting the manual item to confirmed.
+**Next action:** if the visual gate is ever closed, replace the static logo media with a genuine
+product-interface view before setting the manual item to confirmed.
 
 ---
 
@@ -85,7 +88,7 @@ logo media with a genuine product-interface view before setting the manual item 
 | 2 | All six validators produce verdicts on V1 | ☑ |
 | 3 | `eval` prints real metrics, no hardcoded score | ☑ 97.8% |
 | **4** | **Fresh clone → `demo` → real output, no key** ← **SUBMITTABLE** | ☑ verified in `.venv-judge` |
-| 5 | Prose brief → correct spec, `min_seconds: 60` extracted | ☐ **code complete, no live API call made** |
+| 5 | Prose brief → correct spec, `min_seconds: 60` extracted | ☑ live Gemini proposal validated, grounded, and human-approved |
 | 6 | Editing `73%` → `70%` flips the real verdict | ☑ verified in the browser and in `tests/test_engine.py` |
 | 7 | Fresh MP4 → real report, no manual file editing | ◐ audio/ASR/verifier passed; required visual remains manual and unresolved |
 | 8 | Judge understands the report without a terminal | ☑ |
@@ -109,7 +112,7 @@ Mirrors `PRD.md` §6. Check off only when actually verified, not when believed.
 ☑  7  Spoken promo code normalizes             (H-A-R-S-H two zero → HARSH20)
 ☑  8  Disclosure detected with timestamp
 ☑  9  DURATION reads transcript.duration_seconds (validator never shells out)
-☐ 10  Prose brief compiles to valid schema     — needs one live API call
+☑ 10  Prose brief compiles to valid schema     — live Gemini call, grounded and human-approved
 ☑ 11  Every compiler quote is grounded in brief (rules + manual items; retry then reject)
 ☑ 12  Unverifiable requirements → MANUAL REVIEW → explicit human confirmation
 ☑ 13  User can edit / add / delete rules
@@ -122,8 +125,8 @@ Mirrors `PRD.md` §6. Check off only when actually verified, not when believed.
 ☑ 20  No hardcoded verdicts anywhere
 ```
 
-18 of 20 pass. The two open ones need external evidence: one live compiler call and a real visual
-interface confirmation. No verifier code is missing for either.
+19 of 20 pass. The remaining item needs a genuine visual interface confirmation; no verifier code
+is missing for it.
 
 ---
 
@@ -160,6 +163,22 @@ Pinned so nobody has to re-derive them.
 ## Session log
 
 *Newest first. One block per working session.*
+
+### Session 9 — live Gemini compiler acceptance · Aug 17, 2026
+
+- Replaced the Anthropic-specific compiler with the narrow official `google-genai 1.75.0` path;
+  no provider framework, tools, search, transcript access, or verifier changes
+- Disabled hidden SDK retries, retained SponsorLint's one-retry maximum, 60-second timeout,
+  authoritative `Spec` validation, and literal grounding for rule and manual-item quotes
+- A live failure showed direct `response_schema=Spec` mapped `extra="forbid"` incorrectly; switched
+  to the SDK-supported `response_json_schema=Spec.model_json_schema()` path and retained Pydantic
+  validation after the response
+- A second live failure showed `gemini-2.5-flash-lite` unavailable to new users; moved to the
+  documented free-tier `gemini-3-flash-preview` and stopped retrying non-retryable 4xx errors
+- The successful live `samples/brief.pdf` call returned seven rules and one manual item with no
+  retry; all quotes grounded, and the user approved 15-second opening/closing thresholds
+- Final engineering acceptance is **19/20**, not 20/20: option 1 deliberately leaves the real-media
+  visual requirement unresolved
 
 ### Session 8 — real-media audio proof, honest visual status · Aug 17, 2026
 
@@ -283,21 +302,17 @@ Built the whole thing, in the phase order `Phases.md` specifies, verifying each 
   status: open by choice. Architecture.md §5.3 pins the five accepted phrasings;
           adding a sixth is a scope decision, not a bug fix. Do not quietly widen it.
 
-[ISSUE] Recording does not exist yet
-  where:  samples/sponsor-cut-v1.mp4, samples/sponsor-cut-v3.mp4
-  repro:  ls samples/*.mp4
-  impact: GATE 2:00 (Whisper hears all six critical strings) is UNTESTED.
-          `aegisvpn.com/alex` is a fabricated brand name base.en may mangle -- if it
-          does, reword the script BEFORE recording, per Phases.md.
-  status: open. Blocks acceptance tests 15 and the real GATE 9.
+[ISSUE] Real-media visual requirement remains unresolved
+  where:  AegisV3.mp4
+  repro:  inspect the video; it shows a static logo rather than a product interface
+  impact: V3 passes 7/7 automated checks but correctly remains REVIEW.
+  status: open by explicit option-1 decision. Blocks acceptance test 15.
 
-[ISSUE] Compiler never called live
+[RESOLVED] Compiler called live
   where:  sponsorlint/brief/compile.py
-  repro:  ANTHROPIC_API_KEY=... python -m sponsorlint compile samples/brief.pdf
-  impact: acceptance test 10 unverified. If it fails, Phase 5 is cut per Phases.md
-          and the committed hand-written spec carries the demo -- the zero-key path
-          does not need the compiler at all.
-  status: open. Blocks nothing that is already working.
+  repro:  GEMINI_API_KEY=... python -m sponsorlint compile samples/brief.pdf
+  result: 7 rules + 1 manual item; schema-valid, source-grounded, human-approved.
+  status: closed with google-genai 1.75.0 / gemini-3-flash-preview.
 ```
 
 ---
@@ -352,11 +367,12 @@ for the MANUAL_REVIEW reason and the MUST_SAY closest-match hint. Never a verdic
 always live inputs instead, with Delete kept. Fewer clicks, and it makes GATE 12:00 demonstrable
 in about four seconds.
 
-**D-9 · No server-side `fallbacks` on the compiler call.** The Anthropic guidance is to opt into
-refusal fallbacks by default on `claude-opus-5`. `client.messages.parse()` — the clean structured-
-output path that lets the API constraint and the Pydantic validation be the same schema — is not
-on the beta namespace, and combining the two is an unverified shape. A refusal instead surfaces as
-a readable error, which is what `Rules.md` §3 asks for anyway.
+**D-9 · No provider fallbacks or hidden retries on the compiler call.** The canonical compiler is
+the single `google-genai` path. SDK retries are disabled so SponsorLint's explicit one-retry ceiling
+remains literal. The live endpoint rejected the SDK's direct Pydantic-to-OpenAPI translation, so the
+compiler sends `Spec.model_json_schema()` through `response_json_schema` and validates the returned
+structure with `Spec.model_validate` before literal source grounding. Provider failures surface as
+readable errors; non-retryable 4xx responses are not repeated.
 
 **D-10 · Timecode buttons copy, they do not seek.** There is no video player in the UI, and
 jump-to-timestamp is cut #2 in `Rules.md` §9. The button is still a real keyboard-reachable
@@ -385,7 +401,8 @@ Cut order from `Rules.md` §9: demo video → jump-to-timestamp → UI polish �
 
 > The hardened core and zero-key path are verified in a fresh lightweight venv, and the project is
 > ready for final independent review but is not submission-frozen. The real V1/V3 audio,
-> transcription, and verifier path is proven. V3 passes all seven automated checks but remains
-> `REVIEW` because its visual requirement is genuinely unresolved. The remaining empirical work is
-> one live compiler call; only claim `SPONSOR READY` after real interface footage is manually
-> confirmed. The committed transcripts remain authored fixtures; raw Whisper outputs are candidates.
+> transcription, and verifier path is proven. The live Gemini compiler path is also proven against
+> `samples/brief.pdf`, including schema validation, literal source grounding, and explicit human
+> approval. Engineering acceptance is 19/20: V3 passes all seven automated checks but remains
+> `REVIEW` because its visual requirement is genuinely unresolved. Only claim `SPONSOR READY` after
+> real interface footage is manually confirmed. Raw Whisper outputs remain candidates.

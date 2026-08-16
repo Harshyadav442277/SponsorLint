@@ -674,8 +674,8 @@ Two walls kill you with an async judge, and both are on the default path unless 
 ## The deliverable
 
 ```bash
-git clone https://github.com/Harshyadav442277/social-media-automation.git
-cd social-media-automation
+git clone https://github.com/Harshyadav442277/SponsorLint.git
+cd SponsorLint
 pip install -r requirements-demo.txt
 python -m sponsorlint demo
 ```

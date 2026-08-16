@@ -55,8 +55,8 @@ Submittable:      REVIEW-READY — real-media/API proof gates open; not submissi
 - Uploads are streamed through extension allowlists and hard caps, process-local state is bounded,
   and cross-origin state-changing browser requests are rejected
 - GitHub Actions covers Python 3.11–3.13, zero-key demo, eval, and tests. All three versions pass
-  locally in isolated environments. The old green run referenced here belonged to superseded
-  history; the latest remote run must be rechecked after the final push.
+  locally in isolated environments and in the latest verified `main` workflow at the close of
+  the pre-media freeze pass.
 
 **Verified in fresh `.venv-current` on Windows (full development dependencies):**
 
@@ -69,9 +69,9 @@ Submittable:      REVIEW-READY — real-media/API proof gates open; not submissi
 - Missing-key and missing-video failures are readable CLI errors with exit code 2, not tracebacks
 - The earlier `.venv-judge` no-ffmpeg reproduction remains historical evidence; its Python 3.12 base was removed from this machine, so its launcher is now stale
 
-**Next action:** reauthenticate GitHub CLI as a repository owner, update the stale repository
-description/topics, and inspect the latest `main` CI matrix. Then record the MP4s using the safe
-candidate-transcript workflow in `samples/README.md`.
+**Next action:** reauthenticate GitHub CLI as a repository owner and update the stale repository
+description/topics. Then record the MP4s using the safe candidate-transcript workflow in
+`samples/README.md`.
 
 ---
 
@@ -168,8 +168,8 @@ Pinned so nobody has to re-derive them.
   or ffmpeg dependency was needed for demo/eval; missing compiler key exited 2 without a traceback
 - Kept the core frozen; corrected only current-facing documentation and the candidate-transcript
   recording command
-- Found GitHub CLI authenticated as the wrong account with an invalid token, so metadata and current
-  remote CI could not be changed or honestly verified from this environment
+- Found GitHub CLI authenticated as the wrong account with an invalid token, so repository metadata
+  could not be changed; verified the public post-push `main` CI matrix through GitHub instead
 
 ### Session 6 — final principal/security/QA audit · Aug 16, 2026
 

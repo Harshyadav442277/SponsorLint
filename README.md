@@ -1,6 +1,6 @@
 # SponsorLint
 
-[![CI](https://github.com/Harshyadav442277/social-media-automation/actions/workflows/ci.yml/badge.svg)](https://github.com/Harshyadav442277/social-media-automation/actions/workflows/ci.yml)
+[![CI](https://github.com/Harshyadav442277/SponsorLint/actions/workflows/ci.yml/badge.svg)](https://github.com/Harshyadav442277/SponsorLint/actions/workflows/ci.yml)
 
 ## A sponsor brief is a contract. SponsorLint makes it executable.
 
@@ -58,8 +58,8 @@ OUT   1 reviewed, approved machine-readable specification
 **No API key. No model download. No ffmpeg. Six packages.**
 
 ```bash
-git clone https://github.com/Harshyadav442277/social-media-automation.git
-cd social-media-automation
+git clone https://github.com/Harshyadav442277/SponsorLint.git
+cd SponsorLint
 python -m venv .venv && .venv/bin/pip install -r requirements-demo.txt
 .venv/bin/python -m sponsorlint demo
 ```

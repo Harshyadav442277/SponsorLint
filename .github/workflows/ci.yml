@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  lightweight-verification:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: requirements-demo.txt
+
+      - name: Install lightweight dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements-demo.txt pytest httpx
+
+      - name: Run zero-key demo arc
+        run: python -m sponsorlint demo --arc
+
+      - name: Run adversarial evaluation
+        run: python -m sponsorlint eval
+
+      - name: Run tests
+        run: python -m pytest tests -q

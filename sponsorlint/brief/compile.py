@@ -3,7 +3,7 @@
 The model **proposes** the specification. The user owns it. Deterministic code
 enforces the approved version. Nothing here ever sees a transcript.
 
-Imported only from the `compile` and `analyze` command branches — never at
+Imported only from the `compile` command branch and web compile route — never at
 module scope on the demo path.
 """
 
@@ -67,13 +67,20 @@ def compile_brief(brief_text: str, *, model: str = MODEL, client=None) -> Spec:
                 raise last_error
             continue
 
-        return _finalize(spec)
+        try:
+            return _finalize(spec, brief_text)
+        except CompileError as exc:
+            last_error = exc
+            if attempt == 2:
+                raise
+            continue
 
     raise CompileError(f"Could not compile the brief — {last_error}")
 
 
-def _finalize(spec: Spec) -> Spec:
-    """Normalize ids and reject anything the schema could not catch."""
+def _finalize(spec: Spec, brief_text: str) -> Spec:
+    """Normalize ids and ground every compiler-provided quote in the brief."""
+    normalized_brief = _normalized_whitespace(brief_text)
     for index, rule in enumerate(spec.rules, start=1):
         if not rule.id:
             rule.id = f"r{index}"
@@ -86,10 +93,31 @@ def _finalize(spec: Spec) -> Spec:
                 f"Rule {rule.id} has no source quote. Every rule must cite the "
                 f"sentence of the brief it came from."
             )
+        if _normalized_whitespace(rule.source_quote) not in normalized_brief:
+            raise CompileError(
+                f"Rule {rule.id} cites text that does not occur in the supplied brief: "
+                f"{rule.source_quote!r}"
+            )
+    for index, item in enumerate(spec.manual_review, start=1):
+        if _normalized_whitespace(item.source_quote) not in normalized_brief:
+            raise CompileError(
+                f"Manual-review item {index} cites text that does not occur in the "
+                f"supplied brief: {item.source_quote!r}"
+            )
     return spec
 
 
+def _normalized_whitespace(text: str) -> str:
+    return " ".join(text.split())
+
+
 def _client():
+    if not os.environ.get("ANTHROPIC_API_KEY"):
+        raise CompileError(
+            "ANTHROPIC_API_KEY is not set. The compiler needs it; `demo`, "
+            "`verify` and `eval` do not."
+        )
+
     try:
         import anthropic
     except ImportError as exc:
@@ -98,11 +126,6 @@ def _client():
             "but not requirements-demo.txt:  pip install -r requirements.txt"
         ) from exc
 
-    if not os.environ.get("ANTHROPIC_API_KEY"):
-        raise CompileError(
-            "ANTHROPIC_API_KEY is not set. The compiler needs it; `demo`, "
-            "`verify` and `eval` do not."
-        )
     return anthropic.Anthropic()
 
 

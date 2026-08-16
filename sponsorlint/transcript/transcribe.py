@@ -56,11 +56,28 @@ def transcribe(path: Path, model_size: str = "base.en") -> Transcript:
             f"Could not transcribe {path.name} — no speech was detected."
         )
 
+    duration_seconds = _duration(path, info)
     return _validated_transcript(
-        duration_seconds=_duration(path, info),
-        segments=segments,
+        duration_seconds=duration_seconds,
+        segments=_bound_final_segment(segments, duration_seconds),
         source=path.name,
     )
+
+
+def _bound_final_segment(
+    segments: list[Segment], duration_seconds: float
+) -> list[Segment]:
+    """Clamp faster-whisper's padded final timestamp to the media boundary.
+
+    The decoder can assign the final spoken segment an end timestamp beyond the
+    container duration while its start remains inside the media. Only that
+    narrow final-segment shape is corrected; every other impossible timeline
+    still reaches the strict Transcript validator and fails closed.
+    """
+    last = segments[-1]
+    if last.start < duration_seconds < last.end:
+        return [*segments[:-1], last.model_copy(update={"end": duration_seconds})]
+    return segments
 
 
 def _validated_transcript(

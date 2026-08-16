@@ -8,7 +8,12 @@ import pytest
 from sponsorlint.transcript import probe
 from sponsorlint.transcript.probe import ProbeError, probe_duration
 from sponsorlint.models import Segment
-from sponsorlint.transcript.transcribe import TranscribeError, _duration, _validated_transcript
+from sponsorlint.transcript.transcribe import (
+    TranscribeError,
+    _bound_final_segment,
+    _duration,
+    _validated_transcript,
+)
 
 
 @pytest.mark.parametrize("output", ["nan", "inf", "0", "-2"])
@@ -60,3 +65,17 @@ def test_impossible_decoder_timeline_is_a_controlled_transcription_error():
             segments=[Segment(start=0, end=2, text="speech")],
             source="take.mp4",
         )
+
+
+def test_decoder_final_segment_is_bounded_to_media_duration():
+    segments = [
+        Segment(start=0, end=0.8, text="first"),
+        Segment(start=0.8, end=7.4, text="last"),
+    ]
+
+    bounded = _bound_final_segment(segments, 1.0)
+
+    assert bounded[0] == segments[0]
+    assert bounded[1].start == 0.8
+    assert bounded[1].end == 1.0
+    assert segments[1].end == 7.4

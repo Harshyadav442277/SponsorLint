@@ -24,7 +24,7 @@ Three lines are deliberately wrong. They are marked ❌.
 
 **The third planted error is an omission:** the phrase "Shield Mode" never occurs anywhere in V1.
 
-Expected verdict: **3 FAIL · 0 WARN · 4 PASS · 1 MANUAL REVIEW → 4/7 → DO NOT SEND**
+Expected verdict: **3 FAIL · 0 WARN · 4 PASS · 1 MANUAL CONFIRMED → 4/7 → DO NOT SEND**
 
 ## V3 — the corrected take
 
@@ -39,7 +39,11 @@ session, same mic, same room, and splice them over the V1 base take.
 
 The 0:26 replacement carries the "Shield Mode" mention, so one splice fixes two rules.
 
-Expected verdict: **0 FAIL · 7 PASS · 1 MANUAL REVIEW → 7/7 → SPONSOR READY**
+Expected verdict: **0 FAIL · 7 PASS · 1 MANUAL CONFIRMED → 7/7 → SPONSOR READY**
+
+Before approving either take, verify that the fictional Aegis interface remains visible for at
+least five seconds, then check **Confirmed manually** in the review screen. The committed approved
+sample records this confirmation; an unchecked manual item correctly resolves to `REVIEW`.
 
 ## Before you commit to this script — GATE 2:00
 

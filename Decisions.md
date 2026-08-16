@@ -248,11 +248,39 @@ Applied Aug 15, 2026, from a final review pass. Three of the four were already a
 
 ---
 
+## D21 · Hardening pass — nine implementation blockers closed
+
+Aug 16, 2026. A six-lens survey of the frozen documents, scoped strictly to `Rules.md` §0 (contradictions, blockers, deadline risks — no new features). It found nine distinct defects, several verified empirically rather than argued. **No scope changed; every fix makes already-decided behavior implementable.**
+
+**21a · `rapidfuzz.ratio` was the wrong scorer — measured, not debated.** `fuzz.ratio` is whole-string similarity. Against the project's own §7 fixtures it scores every true match 10–67, so **at threshold ≥90 nothing could ever pass** — implementing the spec literally would have returned FAIL for every phrase rule in the demo, discovered at GATE 3:10. `partial_token_set_ratio` is worse: it returns **100.0** on both documented hard negatives ("shield feature", "little league"), a false-PASS generator. Fix: `fuzz.partial_ratio`, with the measured table in `Architecture.md` §5.2 so nobody re-litigates it. Worst true-negative margin is 83.3, leaving 6.7 points of headroom — hence the standing rule not to move the threshold in either direction.
+
+**21b · Phrase matching had no defined haystack.** Measured: a phrase split across a Whisper segment break scores **70.6** per-segment vs **100.0** joined. The obvious `for seg in segments` loop produces false FAILs that depend on where Whisper happens to cut — so it can pass at GATE 3:10 and fail after the Phase 9 re-splice at T+23:30. Fix: always match the joined transcript, keep an offset→segment map for timestamps.
+
+**21c · The Rule schema could not express half the rule types.** One scalar `expected` cannot hold a duration window, a two-phrase prohibition, or a placement constraint — yet `Design.md` rendered `min_seconds`/`max_seconds` and GATE 10:00 literally names `min_seconds`. Agent A and Agent B would have invented incompatible shapes eight hours apart, and correcting the model later would have broken the already-committed zero-key fixture. Fix: the pinned Pydantic model plus a per-type payload table in `Architecture.md` §4.1.
+
+**21d · The disclosure-placement paradox.** D19b forbids inventing a threshold; `Architecture.md` §5.4 required enforcing *"near the beginning"*, which has no number. Mandated and prohibited at once. Fix: route the number through the trust boundary — the compiler emits `within_first_seconds: null, needs_review: true`, the spec is **not approvable** until the user supplies a value, and the committed demo spec ships a user-authored `15`. D4 doing exactly what it exists for.
+
+**21e · DURATION had three competing sources and no way in.** `ffprobe` (which `Rules.md` §5 forbids a pure validator from calling), `transcript.duration_seconds`, and a `video-metadata.v1.json` whose schema was defined nowhere — while `verify --spec --transcript` had no third argument to pass it. Fix: `transcript.duration_seconds` is the sole source, `ffprobe` runs upstream at transcribe time, `video-metadata.v1.json` deleted. This also means **the demo needs no ffmpeg on the judge's machine**.
+
+**21f · The zero-key demo would have crashed on a transitive import.** Verified by building the exact folder layout: a module-scope `from .transcript.transcribe import ...` in `cli.py` makes `python -m sponsorlint demo` die with `ModuleNotFoundError` in a demo-only venv, **before dispatch runs**. It would never appear locally — the dev machine has faster-whisper — and would surface at T+27:30, after the README and GIF were recorded. This is the single deliverable D10/D12 call the safety net. Fix: import discipline rule plus an AST check in Phase 4, and a mandatory verification in a `requirements-demo.txt`-only venv.
+
+**21g · Two invocation forms.** `sponsorlint demo` appeared in the acceptance criteria and the README GIF spec; `python -m sponsorlint demo` everywhere else. Verified: no `pyproject.toml`, no `setup.py`, no console script exists anywhere in the plan, so the bare form cannot work — a judge copy-pasting the quickstart gets `'sponsorlint' is not recognized`, on the 60-second first impression. Fix: `python -m sponsorlint` everywhere, and an explicit "no packaging, run from repo root" note.
+
+**21h · The V1 verdict was wrong in four files.** `Design.md` §7 printed three FAIL cards and then summed them as "2 failed · 1 warning", and that phantom WARN was pinned in `Memory.md` — the file every fresh agent reads first. The "warning" was a disclosure check whose own body said **OK**. An agent reconciling the numbers would have downgraded a real FAIL to `severity: warning` to make the sum work, which is a hardcoded verdict (`Rules.md` §1.11). Fix: `3 FAIL · 0 WARN · 4 PASS · 1 MANUAL → 4/7 → DO NOT SEND`, everywhere. All seven demo rules are `severity: error`.
+
+**21i · V3 could never reach SPONSOR READY.** `Architecture.md` §5.5's ladder sent manual-review items to `REVIEW`; the next line said they never block `SPONSOR READY`. The demo brief *always* carries one manual-review item, so the readiness ladder as written made the payoff frame of the README GIF unreachable — and both readings were defensible, so review would not have caught it. Fix: three mutually exclusive clauses in which manual-review items appear nowhere.
+
+**Also closed:** the spoken-numeral algorithm (`word2number` tested and rejected — it raises on `"save 73 percent"` and folds `"two zero"` to 2; replaced with a run-scanner plus a membership test), the LLM provider (decided, with a pre-flight smoke call at minute ten instead of hour eight), `faster-whisper` never being installed by any phase despite being needed at T+0:15, and Phase 0's 45-minute budget for ~95 minutes of work.
+
+**One gate was strengthened, not just fixed.** GATE 2:00 previously tested only the strings that must be *caught*. It now also tests the strings that must be *recognized* — `"Shield Mode"`, `aegisvpn.com/alex`, `"seventy-three percent"`, `HARSH20`. V3 reaching 7/7 depends entirely on those, and `aegisvpn.com/alex` is a fabricated name `base.en` may mangle. Discovering that at Phase 9 means the arc can never close.
+
+---
+
 ## Open questions
 
 | Question | Owner | Resolve by |
 |---|---|---|
-| Which LLM provider for the compiler | — | Phase 5 |
+| ~~Which LLM provider for the compiler~~ | — | **Resolved in D21** — `anthropic` / `claude-opus-5`, structured outputs, smoke-tested at T+0:25 |
 | Whether the eval fixture count lands at 24 or 30 | — | Phase 3 |
 | Whether jump-to-timestamp survives the cut | — | Phase 8 |
 

@@ -52,10 +52,10 @@ A finding that fits that prompt gets fixed in the source document and noted in `
 | `fastapi` + `uvicorn` | API and serving the UI |
 | `jinja2` | templates |
 | `pydantic` | schema validation at every boundary |
-| `rapidfuzz` | fuzzy matching — **names and phrases only** |
+| `rapidfuzz` | fuzzy matching — **names and phrases only**. `fuzz.partial_ratio` ≥ 90 on the **joined** transcript. **Never `fuzz.ratio`** (whole-string; measured 10–67 on true matches, so nothing can ever pass). **Never `partial_token_set_ratio`** (measured 100.0 on both documented hard negatives — a false-PASS machine) |
 | `pypdf` | PDF text extraction |
 | `faster-whisper` | transcription — **`base.en` model, CPU** |
-| `ffmpeg` / `ffprobe` | duration and media metadata |
+| `ffmpeg` / `ffprobe` | duration, **at transcribe time only**. `ffprobe` writes `duration_seconds` into the transcript; validators read it from there and never shell out. **The demo path must run with no ffmpeg on PATH** |
 | `pytest` | tests |
 
 ## Do not add without a reason tied to an acceptance test

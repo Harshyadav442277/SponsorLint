@@ -24,35 +24,71 @@ Only then add the surrounding machinery.
 
 ---
 
-## `T+0:00 – 0:15` · Setup and scope freeze
+## `T+0:00 – 0:25` · Setup, pre-flight, scope freeze
+
+**Every external dependency gets proven now.** Discovering a broken install at T+1:00 costs an hour; discovering it at minute ten costs nothing.
 
 - Create the repo. Copy the seven documents in.
 - README with three things only: title, one-sentence pitch, input/output block.
-- `pip install fastapi uvicorn jinja2 pydantic rapidfuzz python-multipart`
-- Create both requirements files now (`requirements-demo.txt`, `requirements.txt`) so the split is never an afterthought.
+- Create **both** requirements files first, so the split is never an afterthought:
+  - `requirements-demo.txt` → `fastapi uvicorn jinja2 pydantic rapidfuzz python-multipart`
+  - `requirements.txt` → the above **plus** `pypdf faster-whisper anthropic pytest`
 
-> **GATE** — repo exists, demo deps install clean.
+```bash
+python -m venv .venv
+.venv\Scripts\pip install -r requirements.txt
+```
+
+**Then run all four pre-flight checks. Do not proceed past a failure.**
+
+| # | Check | Command | If it fails |
+|---|---|---|---|
+| 1 | ffprobe answers | `ffprobe -version` | Install ffmpeg now. Only `transcribe` needs it — the demo path does not (`Architecture.md` §4.3) |
+| 2 | **Whisper model cached** | `python -c "from faster_whisper import WhisperModel; WhisperModel('base.en')"` | ~140MB download. **Force it now, before recording** — it is not budgeted anywhere else |
+| 3 | LLM reachable | one live smoke call returning a two-field object | Phase 5 is cut. The hand-written spec carries the demo; nothing else changes |
+| 4 | Module invocation | `python -m sponsorlint` from repo root | Fix `__main__.py` before anything imports it |
+
+> **GATE 0:25** — both requirements files install clean in a **fresh venv**, `base.en` is cached locally, ffprobe answers, and the LLM smoke call either succeeded or Phase 5 is formally cut and logged in `Memory.md`.
 
 ---
 
-## `T+0:15 – 1:00` · PHASE 0 — Demo assets first
+## `T+0:25 – 2:00` · PHASE 0 — Demo assets first
 
 **Counterintuitive but correct.** The assets gate every downstream test, need no code, and need your voice at full energy — which you will not have at hour 30.
+
+**Budgeted at 95 minutes, not 45.** This phase absorbs writing the brief, PDF export, scriptwriting, test-transcription, a full take, and phone-to-PC transfer. The old 45-minute figure was fiction, and the overrun would have pushed every downstream gate.
 
 1. Write `samples/brief.md` **exactly as specified in `PRD.md` §5**. Do not "improve" it.
 2. Export `samples/brief.pdf` with a header and reasonable typography.
 3. Write the ~75-second script with the three planted errors.
-4. **Test-transcribe just the three error sentences with `base.en`, right now.**
-5. **If Whisper mangles the centerpiece, change the wording now** — not at hour twenty-six. Your entire demo rests on one transcription.
+4. **Test-transcribe the critical strings with `base.en`, right now** — see the gate below.
+5. **If Whisper mangles any of them, change the wording now** — not at hour twenty-six.
 6. Record V1. Phone mic is fine. Enunciate the numbers.
+7. **In the same session, same mic, same room: record the three corrected sentences for V3.** Ten minutes now removes an hour at T+23:30 and eliminates the mic/level mismatch that splicing would otherwise expose.
 
-*Agents scaffold in parallel:* repo skeleton, six validator stubs each with one failing test, `ffprobe` wrapper, Pydantic schemas. Nothing that needs the video.
+### Parallel work (`Rules.md` §11 work split)
 
-> **GATE 1:00** — brief and V1 exist. The numeric error, the prohibited phrase, and the disclosure all transcribe reliably.
+| Agent | During Phase 0 |
+|---|---|
+| **A** | `models.py` from `Architecture.md` §4.1 · six validator stubs, each with one failing test · `normalize/` skeleton |
+| **B** | `brief/extract.py` (pypdf) · the compiler prompt file |
+| **D** | brief, script, recording — **the critical path** |
+
+Agent C (UI) has nothing to do until Phase 8. **Nothing an agent writes here may need the video.**
+
+> **GATE 2:00** — brief and V1 exist, and `base.en` transcribes **all seven** critical strings recognizably:
+>
+> | Must be *caught* | Must be *recognized* |
+> |---|---|
+> | "seventy percent" | "Shield Mode" |
+> | "completely anonymous" | "aegisvpn.com/alex" |
+> | the disclosure phrase | "seventy-three percent" · "HARSH20" |
+>
+> The old gate tested only the left column — the strings that must FAIL. But V3 reaching 7/7 depends entirely on the right column, and `aegisvpn.com/alex` is a fabricated brand name `base.en` may well mangle. **If any string in the right column is unrecognizable, change the script now.** Discovering it at Phase 7 or Phase 9 means the arc can never reach `SPONSOR READY`.
 
 ---
 
-## `T+1:00 – 2:10` · PHASE 1 — Verifier vertical slice
+## `T+2:00 – 3:10` · PHASE 1 — Verifier vertical slice
 
 **Do not build the compiler or the upload UI first.**
 
@@ -63,13 +99,13 @@ Only then add the surrounding machinery.
 5. One validator: `MUST_SAY`
 6. Print a real PASS/FAIL with a timestamp
 
-> **GATE 2:10** — one command produces one real verdict from the cached real transcript.
+> **GATE 3:10** — one command produces one real verdict from the cached real transcript.
 >
 > **If this fails, stop all UI and compiler work.** Nothing else matters until this works.
 
 ---
 
-## `T+2:10 – 3:15` · PHASE 2 — The six validators
+## `T+3:10 – 4:15` · PHASE 2 — The six validators
 
 In order: `MUST_SAY` → `MUST_NOT_SAY` → `EXACT_VALUE` → `MUST_DISCLOSE` → `DURATION` → `URL_OR_CTA`
 
@@ -77,13 +113,13 @@ In order: `MUST_SAY` → `MUST_NOT_SAY` → `EXACT_VALUE` → `MUST_DISCLOSE` �
 
 Per validator: write the failing test → implement → pass → run on V1 → move on.
 
-> **GATE 3:15** — all six families produce expected verdicts on V1.
+> **GATE 4:15** — all six families produce expected verdicts on V1.
 >
 > **The deterministic core now exists. Everything after this is upside.**
 
 ---
 
-## `T+3:15 – 5:15` · PHASE 3 — Normalization depth + eval harness
+## `T+4:15 – 6:15` · PHASE 3 — Normalization depth + eval harness
 
 - Spoken numbers, currency, percent (`normalize/numbers.py`)
 - URLs (`normalize/urls.py`), promo codes (`normalize/codes.py`)
@@ -91,17 +127,28 @@ Per validator: write the failing test → implement → pass → run on V1 → m
 - `python -m sponsorlint eval` printing real metrics
 - Tune to avoid false FAILs; route ambiguity to `MANUAL REVIEW`
 
-> **GATE 5:15** — real metrics printed. No hardcoded score. False FAILs and false PASSes both visible.
+> **GATE 6:15** — real metrics printed. No hardcoded score. False FAILs and false PASSes both visible.
 
 ---
 
-## `T+5:15 – 7:00` · PHASE 4 — Zero-key demo path
+## `T+6:15 – 8:00` · PHASE 4 — Zero-key demo path
 
-- Commit `spec.approved.json`, `transcript.v1.json`, `video-metadata.v1.json`
+- Commit `spec.approved.json` and `transcript.v1.json` — **two fixtures, not three**. Duration lives on the transcript (`Architecture.md` §4.3)
 - Wire `python -m sponsorlint demo`
-- Confirm `requirements-demo.txt` has no whisper, no LLM client, no torch
+- Confirm `requirements-demo.txt` has no whisper, no LLM client, no pypdf, no torch
+- **Run the import-discipline check** (`Architecture.md` §6). A module-scope `faster_whisper` import in `cli.py` kills the demo for a judge and is invisible on your machine
 
-> **GATE 7:00** — fresh clone → one command → real output. No key, no download, under sixty seconds.
+**Verify in a venv built from `requirements-demo.txt` ALONE — not your dev environment:**
+
+```bash
+python -m venv .venv-judge
+.venv-judge\Scripts\pip install -r requirements-demo.txt
+.venv-judge\Scripts\python -m sponsorlint demo
+```
+
+Your dev env has faster-whisper installed, so `demo` will appear to work there right up until the clean-environment run at T+27:30 — two hours before the deadline, after the README and GIF are already recorded.
+
+> **GATE 8:00** — fresh clone → one command → real output. No key, no download, **no ffmpeg**, under sixty seconds, from a venv that has only the six demo packages.
 >
 > ### You are now submittable.
 >
@@ -109,7 +156,7 @@ Per validator: write the failing test → implement → pass → run on V1 → m
 
 ---
 
-## `T+7:00 – 9:30` · PHASE 5 — PDF extraction + compiler
+## `T+8:00 – 10:00` · PHASE 5 — PDF extraction + compiler
 
 - `pypdf` text extraction
 - The constrained prompt (`Architecture.md` §9)
@@ -118,11 +165,11 @@ Per validator: write the failing test → implement → pass → run on V1 → m
 - Unverifiable requirements → `manual_review`, not dropped
 - Unsupported rule types rejected at validation
 
-> **GATE 9:30** — the realistic prose brief produces the intended spec with no invented requirements, and `min_seconds: 60` came out of *"no shorter than one minute."*
+> **GATE 10:00** — the realistic prose brief produces the intended spec with no invented requirements, and `min_seconds: 60` came out of *"no shorter than one minute."*
 
 ---
 
-## `T+9:30 – 12:00` · PHASE 6 — Editable spec review
+## `T+10:00 – 12:00` · PHASE 6 — Editable spec review
 
 Split-screen: source prose left, extracted rule right, `source_quote` visible. Edit, delete, add, approve. The **approved** spec enters the verifier.
 
@@ -216,14 +263,14 @@ Optional 90-second demo video **only if the README is already excellent**. Submi
 
 | Phase | Window | Delivers | Gate |
 |---|---|---|---|
-| — | 0:00–0:15 | Repo, deps | Installs clean |
-| 0 | 0:15–1:00 | Brief, script, V1 | Whisper hears the planted errors |
-| 1 | 1:00–2:10 | Vertical slice | One real verdict |
-| 2 | 2:10–3:15 | Six validators | All produce verdicts on V1 |
-| 3 | 3:15–5:15 | Normalization + eval | Real metrics printed |
-| 4 | 5:15–7:00 | Zero-key demo | **Submittable** |
-| 5 | 7:00–9:30 | PDF + compiler | Prose → correct spec |
-| 6 | 9:30–12:00 | Editable review | Edited spec flips the verdict |
+| — | 0:00–0:25 | Repo, deps, **pre-flight** | Fresh venv installs, base.en cached, ffprobe + LLM checked |
+| 0 | 0:25–2:00 | Brief, script, V1 **+ V3 lines** | Whisper hears all 7 critical strings |
+| 1 | 2:00–3:10 | Vertical slice | One real verdict |
+| 2 | 3:10–4:15 | Six validators | All produce verdicts on V1 |
+| 3 | 4:15–6:15 | Normalization + eval | Real metrics printed |
+| 4 | 6:15–8:00 | Zero-key demo | **Submittable** — verified in a demo-only venv |
+| 5 | 8:00–10:00 | PDF + compiler | Prose → correct spec |
+| 6 | 10:00–12:00 | Editable review | Edited spec flips the verdict |
 | 7 | 12:00–13:30 | Full MP4 flow | Fresh video → real report |
 | — | 13:30–19:30 | **Sleep** | — |
 | 8 | 19:30–23:30 | Web UI | Judge needs no terminal |
@@ -231,6 +278,26 @@ Optional 90-second demo video **only if the README is already excellent**. Submi
 | 10 | 25:00–27:30 | README + GIF | — |
 | — | 27:30–29:30 | Clean-env repro | Works from scratch |
 | — | 29:30+ | Buffer, submit | — |
+
+---
+
+# When a gate fails
+
+Only Phase 1 had a stop instruction. Every gate needs one, because "the gate failed" at hour 12 with no written recovery is how a plan turns into improvisation.
+
+| Gate | If it fails |
+|---|---|
+| `0:25` pre-flight | ffprobe → install, demo path unaffected. Whisper → **hard stop**, nothing works without it. LLM → cut Phase 5, log it, continue |
+| `2:00` assets | Reword the script and re-record **now**. Never proceed with a string Whisper cannot hear |
+| `2:10` vertical slice | **Hard stop.** Strip the compiler plan to a single prompt with no retry logic. Nothing else matters until one real verdict prints |
+| `3:15` six validators | Ship the ones that work; a broken validator becomes `MANUAL REVIEW`, never a fake PASS. Log it in `Memory.md` |
+| `5:15` eval | Reduce the fixture count, never fake the number. A real 18-case number beats an invented 28-case one |
+| `7:00` zero-key | **Hard stop — this is the submission.** Nothing after this matters until a clean venv runs `demo` |
+| `9:30` compiler | Cut Phase 5. The committed hand-written spec carries the demo. Say so in the README's limitations |
+| `12:00` editable spec | Ship read-only spec review. Note in the README that editing is not wired |
+| `13:30` full MP4 | Ship the cached-transcript path only. `transcribe` becomes a documented manual step |
+| `23:30` UI | Ship the CLI (`Rules.md` §9). The event says a working script counts |
+| `25:00` demo arc | Ship V1 only. A single honest `DO NOT SEND` beats a broken arc |
 
 ---
 
@@ -247,4 +314,4 @@ Cut in exactly this order (from `Rules.md` §9):
 
 **Never cut:** the eval number · the zero-key demo path · the README.
 
-Phase 4 is the line. If you reach `T+7:00` with the zero-key demo working, you have a complete submission no matter what happens next.
+Phase 4 is the line. If you reach `T+8:00` with the zero-key demo working, you have a complete submission no matter what happens next.

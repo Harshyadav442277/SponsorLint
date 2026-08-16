@@ -149,12 +149,12 @@ The largest element on the report. Three states, each with icon + word + color.
 ```
 ┌─────────────────────────────────────────────────────────┐
 │  ✕   DO NOT SEND                                        │   fail
-│      2 failed · 1 warning · 4 passed · 1 manual review  │
+│      3 failed · 4 passed · 1 manual review              │
 └─────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────┐
 │  !   REVIEW                                             │   warn
-│      0 failed · 1 warning · 6 passed · 1 manual review  │
+│      0 failed · 1 warning · 6 passed                    │
 └─────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────┐
@@ -221,7 +221,7 @@ The screen that kills three objections at once. Two columns, one row per rule, a
 │ "...run no shorter than one     │ [DURATION]                      │
 │  minute and no longer than one  │ min_seconds  60                 │
 │  minute and thirty seconds."    │ max_seconds  90                 │
-│                                 │ warning          [Edit] [Del]   │
+│                                 │ error            [Edit] [Del]   │
 │ ────────────────────────────────┼──────────────────────────────── │
 │ "...they can save seventy-      │ [EXACT_VALUE]                   │
 │  three percent..."              │ expected     73%                │
@@ -307,7 +307,7 @@ Wide content (the eval table, long transcript lines) gets `overflow-x: auto` on 
 
 # 7. Terminal output
 
-The CLI is a first-class surface — it is what `sponsorlint demo` shows, and likely what the README GIF captures.
+The CLI is a first-class surface — it is what `python -m sponsorlint demo` shows, and likely what the README GIF captures.
 
 ```
 SponsorLint — samples/sponsor-cut-v1.mp4
@@ -327,14 +327,14 @@ SponsorLint — samples/sponsor-cut-v1.mp4
         detected  "completely anonymous"
         "It keeps you completely anonymous online."
 
-  WARN  Disclosure placement                               00:04
-        brief requires disclosure near the beginning — OK
+  PASS  Disclosure near beginning                           00:04
+        within_first_seconds 15 (user-set) — disclosed at 00:04
 
   MANUAL  Visual requirement — not verifiable from audio
         "The product interface should be visible for five seconds."
 
   ────────────────────────────────────────────────────────────
-  2 failed · 1 warning · 4 passed · 1 manual review
+  3 failed · 4 passed · 1 manual review
 
   DO NOT SEND
 ```
@@ -395,7 +395,7 @@ Add at least one rule, or re-compile the brief.
 The single most-viewed visual artifact in the project.
 
 - Terminal, dark theme, ~6 seconds, no narration, no cursor wiggling
-- Shows: `sponsorlint demo` → findings scroll → `4/7 · DO NOT SEND` → the corrected run → `7/7 · SPONSOR READY`
+- Shows: `python -m sponsorlint demo` → findings scroll → `4/7 · DO NOT SEND` → the corrected run → `7/7 · SPONSOR READY`
 - Use the **raw fraction**, not a percentage. Report the counts the run actually produces
 - Font ≥ 16px in the recording — it will be viewed at half size on GitHub
 - Trim every idle frame. The whole point is the verdict flipping

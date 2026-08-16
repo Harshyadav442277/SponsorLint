@@ -110,7 +110,7 @@ BEFORE sending it to the sponsor      ← the product lives here
 | State | Meaning |
 |---|---|
 | `DO NOT SEND` | A blocking requirement failed |
-| `REVIEW` | No blocking failure, but warnings or manual-review items exist |
+| `REVIEW` | No blocking failure, but a non-blocking (warning-severity) requirement failed. **Manual-review items never cause `REVIEW`** |
 | `SPONSOR READY` | All blocking requirements passed |
 
 A percentage score is optional and secondary. **The binary state is what matters.**
@@ -158,7 +158,7 @@ Requirements that cannot be verified from audio or duration are surfaced as `MAN
 Every finding answers five questions: **what was required · what was detected · where · what evidence · where did the requirement come from.**
 
 ### F7 · Eval harness
-`sponsorlint eval` runs the validators over 24–30 labeled text fixtures and reports real accuracy, false FAILs, and false PASSes. **This is a required feature, not a stretch goal.**
+`python -m sponsorlint eval` runs the validators over 24–30 labeled text fixtures and reports real accuracy, false FAILs, and false PASSes. **This is a required feature, not a stretch goal.**
 
 ### F8 · Zero-key demo
 `python -m sponsorlint demo` runs the real verifier against committed fixtures with no API key, no network, and no model download.
@@ -220,6 +220,37 @@ for at least five seconds during the segment.
 
 **Yield: 7 checkable rules + 1 manual review**, exercising every rule type.
 
+### The canonical spec — pin this, do not re-derive it
+
+The brief does not decompose unambiguously. Two readings give 7 and two give 8, and Phase 1 hand-writes `samples/spec.approved.json` as the very first artifact while Phase 5's gate is "the compiler produces the intended spec" — unfalsifiable without a written target. **This is the target.**
+
+| id | type | payload | sev | from the brief |
+|---|---|---|---|---|
+| `r1` | `MUST_DISCLOSE` | `within_first_seconds: 15` | error | "make clear near the beginning … sponsored by Aegis VPN" |
+| `r2` | `DURATION` | `min_seconds: 60, max_seconds: 90` | error | "no shorter than one minute and no longer than one minute and thirty seconds" |
+| `r3` | `EXACT_VALUE` | `expected: "73%"` | error | "they can save seventy-three percent" |
+| `r4` | `URL_OR_CTA` | `expected: "aegisvpn.com/alex"` | error | "should be directed to aegisvpn.com/alex" |
+| `r5` | `MUST_SAY` | `phrases: ["Shield Mode"]` | error | "mention Shield Mode by name at least once" |
+| `r6` | `MUST_NOT_SAY` | `phrases: ["completely anonymous", "unhackable"]` | error | "Avoid describing Aegis VPN as …" |
+| `r7` | `URL_OR_CTA` | `expected: "aegisvpn.com/alex"` | error | "The closing should include a direct call to action" |
+| — | manual review | — | — | "product interface should be visible on screen for at least five seconds" |
+
+**The two decompositions that matter, and why:**
+
+- **r6 is ONE rule with two phrases, not two rules.** Two rules makes the yield 8 and breaks the `4/7` arc everywhere. The `phrases: list[str]` field in `Architecture.md` §4.1 exists for exactly this.
+- **`within_first_seconds: 15` is user-authored**, supplied through the review screen — never invented by the tool (`Architecture.md` §5.4).
+
+**All seven are `severity: error`.** Nothing in this brief produces a `WARN`.
+
+### V1 verdict — canonical, use these numbers everywhere
+
+V1 fails `r3` (says "seventy percent"), `r5` (never says "Shield Mode"), `r6` (says "completely anonymous"). Everything else passes.
+
+```
+3 FAIL · 0 WARN · 4 PASS · 1 MANUAL REVIEW   →   4/7   →   DO NOT SEND
+V3: 7/7 → SPONSOR READY
+```
+
 ## The recorded segment
 
 One ~75-second take with planted errors:
@@ -278,8 +309,8 @@ The MVP is complete only when **all** pass.
 | 13 | User can edit / add / delete rules |
 | 14 | **Edited spec changes the real verdict** (change 73% → 70%, verdict flips) |
 | 15 | Fresh MP4 can be transcribed and verified |
-| 16 | `sponsorlint eval` reports actual metrics |
-| 17 | `sponsorlint demo` works with no LLM credentials and no model download |
+| 16 | `python -m sponsorlint eval` reports actual metrics |
+| 17 | `python -m sponsorlint demo` works from a clean clone with no LLM credentials, no model download, and **no ffmpeg on PATH** |
 | 18 | Every failure shows expected / detected / timestamp / evidence / source quote |
 | 19 | Blocking failure → `DO NOT SEND`; all blocking passing → `SPONSOR READY` |
 | 20 | **No hardcoded verdicts anywhere.** Every result is computed |

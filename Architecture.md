@@ -178,7 +178,6 @@ sponsorlint/
 │   ├── spec.approved.json        COMMITTED — enables zero-key demo
 │   ├── transcript.v1.json        COMMITTED
 │   ├── transcript.v3.json        COMMITTED
-│   ├── video-metadata.v1.json    COMMITTED
 │   ├── sponsor-cut-v1.mp4
 │   └── sponsor-cut-v3.mp4
 │
@@ -219,9 +218,41 @@ Every boundary is a Pydantic model. Validate on the way in and on the way out.
 
 `source_quote` is **mandatory**. Reject any extraction without it — it is what makes each rule auditable and what powers the split-screen review.
 
-`severity` is `error` (blocking) or `warning` (non-blocking).
+`severity` is `error` (blocking) or `warning` (non-blocking). **`severity` is consulted only when a rule FAILS.** A passing rule always reports `PASS` regardless of severity.
 
 Rule types beyond the six in `PRD.md` §4.1 are rejected at validation.
+
+### Per-type payload — a scalar `expected` is not enough
+
+A single `expected` string cannot hold a duration window, a multi-phrase prohibition, or a placement constraint. **Pin the model exactly as below**; `models.py` is the first file written and every other module types against it.
+
+```python
+class Rule(BaseModel):
+    id: str
+    type: Literal["MUST_SAY","MUST_NOT_SAY","EXACT_VALUE",
+                  "MUST_DISCLOSE","DURATION","URL_OR_CTA"]
+    label: str
+    source_quote: str                      # mandatory — reject without it
+    severity: Literal["error","warning"] = "error"
+    needs_review: bool = False
+
+    expected: str | None = None            # EXACT_VALUE, URL_OR_CTA
+    phrases: list[str] | None = None       # MUST_SAY, MUST_NOT_SAY
+    min_seconds: float | None = None       # DURATION
+    max_seconds: float | None = None       # DURATION
+    within_first_seconds: float | None = None   # MUST_DISCLOSE placement
+```
+
+| Type | Populated fields | Semantics |
+|---|---|---|
+| `MUST_SAY` | `phrases: [str, ...]` | PASS if **any** phrase occurs |
+| `MUST_NOT_SAY` | `phrases: [str, ...]` | PASS only if **none** occur. One brief sentence prohibiting N phrases compiles to **one rule with N phrases**, sharing one `source_quote` |
+| `EXACT_VALUE` | `expected: str` | membership test, §5.1 |
+| `URL_OR_CTA` | `expected: str` | canonicalized, §5.1 |
+| `MUST_DISCLOSE` | `within_first_seconds: float \| null` | accepted disclosure phrases are a module constant in `lint/disclosure.py`, **not** a rule field — the compiler never emits them |
+| `DURATION` | `min_seconds`, `max_seconds` (either may be null) | `expected` omitted |
+
+`MUST_SAY` and `MUST_NOT_SAY` always use `phrases`, never `expected`, so the editor and the validators have one shape to render and one to read.
 
 ## 4.2 Spec
 
@@ -253,6 +284,8 @@ Rule types beyond the six in `PRD.md` §4.1 are rejected at validation.
 
 Segment timestamps are sufficient. Word timestamps are useful, not required.
 
+**`duration_seconds` is REQUIRED and is the only duration any validator ever reads.** `ffprobe` runs upstream in `transcript/probe.py` at transcribe time and writes the value into this file. Validators stay pure (`Rules.md` §5) and never shell out — **this is what keeps the zero-key demo free of an ffmpeg dependency on the judge's machine.** There is no separate `video-metadata.json`; a second duration source would silently disagree with this one.
+
 ## 4.4 Result
 
 ```json
@@ -276,7 +309,7 @@ Every failure answers five questions: **what was required · what was detected �
 ```json
 {
   "status": "FAIL",
-  "summary": { "pass": 4, "warn": 1, "fail": 2, "manual_review": 1 },
+  "summary": { "pass": 4, "warn": 0, "fail": 3, "manual_review": 1 },
   "results": [ /* Result[] */ ],
   "manual_review": [ /* ManualReviewItem[] */ ]
 }
@@ -312,6 +345,29 @@ Must **not** compare equal:
 70%   vs   73%
 ```
 
+### The algorithm — a run-scanner, no new dependency
+
+Do not reach for `word2number`. It was tested against the strings a validator actually receives and fails on all of them: it raises on `"save 73 percent"` (cannot read digits at all, defeating the whole digits-or-words requirement), returns `31` for `"one minute and thirty seconds"`, returns `2` for `"two zero"` (codes need concatenation, not summation), and returns only one number per string.
+
+**Rewrite number-words to digits in place, then test membership.** In `normalize/numbers.py`:
+
+1. Lowercase, then `re.sub(r'(?<=[a-z])-(?=[a-z])', ' ', text)` so `seventy-three` tokenizes.
+2. Tokenize on whitespace.
+3. Walk tokens. On each **maximal run** of number-words — `UNITS` 0–19, `TENS` 20–90, `SCALES` hundred/thousand/million, absorbing an internal `and` only while a run is already open — fold the run to an int: units and tens accumulate, `hundred` multiplies the accumulator, larger scales flush it. Emit the digit string in place. Leave every other token untouched.
+4. Result: `"you can save up to 70 percent using my link."` The rewriter is **idempotent** on text that already contains digits — which is exactly what makes both Whisper output styles work.
+
+**`EXACT_VALUE` then does not parse at all — it is a membership test.** Canonicalize the transcript with the rewriter, then search with a boundary-guarded pattern:
+
+```python
+re.search(rf'(?<![\d.]){re.escape(value)}(?![\d])', canonical)
+```
+
+Verified: `73` in `"seventy-three percent"` → True · in `"seventy percent"` → False · in `"73 percent"` → True · in `"730 dollars"` → False · in `"chapter 173"` → False.
+
+**`normalize/codes.py` uses a separate per-digit map** (`two`→`2`, `zero`→`0`, concatenated, letters uppercased) — **never** the arithmetic folder, which would fold `two zero` to 2.
+
+`"one minute and thirty seconds"` → 90 is the **compiler's** job (Phase 5, LLM), not the normalizer's. The normalizer correctly yields `"1 minute and 30 seconds"`; turning that into `min_seconds: 60, max_seconds: 90` is semantic work the LLM does once, at compile time.
+
 ### Promo codes
 ```
 "H-A-R-S-H two zero"  ·  "HARSH two zero"  ·  "HARSH20"   →   HARSH20
@@ -332,38 +388,98 @@ Normalize spaces, verbal punctuation, optional `www`, scheme, casing, trailing s
 | Deterministic mismatch | `FAIL` |
 | Ambiguous | `MANUAL REVIEW` |
 
-**Fuzzy matching is acceptable** for minor transcription noise in names and phrases — `"Shield Mode"` versus a small tokenization error. Threshold ≥ 90 on `rapidfuzz.ratio`.
+### The haystack: always the JOINED transcript, never per segment
 
-**Fuzzy matching is never acceptable for numeric values.** `70` is not `73`.
+Build the haystack **once**, after normalization:
+
+```python
+haystack = " ".join(seg.text for seg in transcript.segments)   # then normalize
+offsets  = [(char_offset, segment_index), ...]                 # to resolve a hit back
+```
+
+A required phrase routinely straddles a Whisper segment break. **Measured:** for segments `"definitely try shield"` / `"mode when you sign up."`, the best per-segment score for `"shield mode"` is **70.6** (FAIL) while the joined text scores **100.0** (PASS). A per-segment loop is the highest-probability silent demo break in the project — it depends on where Whisper happens to cut, so it can pass at GATE 2:10 and fail after the Phase 9 re-splice at T+23:30.
+
+Keep the `(offset → segment)` map so a match resolves back to a segment for its timestamp.
+
+### The scorer: `partial_ratio`, never `ratio`, never `partial_token_set_ratio`
+
+```python
+from rapidfuzz import fuzz
+score = fuzz.partial_ratio(normalized_phrase, normalized_haystack)   # threshold >= 90
+```
+
+Measured on rapidfuzz against the §7 fixtures — this is not a preference, `ratio` is simply broken here:
+
+| needle vs haystack | `ratio` | `partial_ratio` | `partial_token_set_ratio` | must be |
+|---|---:|---:|---:|---|
+| `shield mode` / "try shield mode today." | 66.7 | **100.0** | 100.0 | PASS |
+| `completely anonymous` / full transcript | 21.3 | **100.0** | 100.0 | PASS |
+| `sponsored by` / full transcript | 13.3 | **100.0** | 100.0 | PASS |
+| `shield mode` / "try the shield feature today." | 45.0 | **72.7** | 100.0 ✗ | FAIL |
+| `completely anonymous` / "browse anonymously" | 63.2 | **71.4** | 73.3 | no fire |
+| `sponsored by` / "i sponsored a little league team once." | 40.0 | **83.3** | 100.0 ✗ | FAIL |
+
+- **`fuzz.ratio` is whole-string similarity.** It scores every true match 10–67, so at a ≥90 threshold nothing could ever pass. Implementing §5.2 literally would return FAIL for every phrase rule in the demo.
+- **`partial_token_set_ratio` returns 100.0 on both documented hard negatives.** It is a false-PASS generator. Never use it.
+- `partial_ratio`'s worst true-negative margin is the little-league case at 83.3 — **6.7 points of headroom at threshold 90.** Do not raise the threshold above 90 and do not lower it.
+
+**Short-needle guard.** `partial_ratio("vpn", <any transcript containing v…p…n>)` = **100.0**. Any phrase shorter than **8 characters after normalization must be matched exactly, never fuzzed.**
+
+### Order of operations
+
+Normalized exact containment runs first on every phrase rule. Fuzzy is only the fallback.
+
+**Fuzzy matching is never acceptable for numeric values.** `70` is not `73`. `EXACT_VALUE` is membership only (§5.1).
 
 > **Do not loosen a fuzzy threshold to make the demo pass.** If you are tuning a threshold to turn a FAIL green, you have broken the product.
 
 ## 5.3 Per-validator notes
 
+Every validator has the signature `(rule: Rule, tx: Transcript) -> Result`. **Pure — no I/O, no network, no subprocess** (`Rules.md` §5). Everything a validator needs is already in those two objects.
+
 | Validator | Notes |
 |---|---|
-| `MUST_SAY` | normalized exact → fuzzy ≥90 → FAIL. On failure, report the closest partial match so the user sees *why* |
-| `MUST_NOT_SAY` | same, inverted. **Substring trap:** bare `anonymous` must not fire a rule for `"completely anonymous"` |
-| `EXACT_VALUE` | full numeral normalization. Deterministic only. Never an LLM. Never fuzzy |
-| `MUST_DISCLOSE` | phrase set + fuzzy: `sponsored by`, `this video is sponsored by`, `paid partnership`, `thanks to X for sponsoring`, `today's sponsor is`. **Always return the timestamp** |
-| `DURATION` | `ffprobe`. One call. No LLM |
-| `URL_OR_CTA` | canonicalize per §5.1 |
+| `MUST_SAY` | any of `rule.phrases`: normalized exact containment → `partial_ratio` ≥90 → FAIL. On failure report the best-scoring window as the closest match so the user sees *why* |
+| `MUST_NOT_SAY` | **normalized exact containment only — no fuzzy.** A fuzzy prohibition false-fires, and a false FAIL is the expensive error (§7). Exact hit → FAIL with that segment's timestamp. Score ≥90 without containment → `MANUAL REVIEW`, never FAIL |
+| `EXACT_VALUE` | membership test on the canonicalized transcript (§5.1). Deterministic only. Never an LLM. Never fuzzy |
+| `MUST_DISCLOSE` | matches the module-level phrase constant in `lint/disclosure.py` — `sponsored by`, `this video is sponsored by`, `paid partnership`, `thanks to X for sponsoring`, `today's sponsor is`. The compiler never emits these. **Always return the timestamp.** Placement per §5.4 |
+| `DURATION` | reads `tx.duration_seconds` against `rule.min_seconds` / `rule.max_seconds`. **Never shells out to ffprobe** — that ran upstream at transcribe time (§4.3) |
+| `URL_OR_CTA` | canonicalize both sides per §5.1, then containment |
+
+**The substring trap, stated in the direction the fixture tests it:** a rule prohibiting `"completely anonymous"` must **not** fire on a transcript that only says `"anonymously"`. Exact containment gives this for free; fuzzy does not (measured 71.4, safely under threshold, but only because the threshold holds).
 
 ## 5.4 Disclosure placement
 
 Not a rule type. A derived property of the `MUST_DISCLOSE` result.
 
+**The paradox, and its resolution.** The demo brief says *"near the beginning"* — placement is specified, so it should be enforced. But *"near the beginning"* is not a number, and enforcing it requires comparing the timestamp to a threshold, and every available threshold is one **we** invented, which `Rules.md` §1.14 forbids. The check is simultaneously mandated and prohibited.
+
+**Route the number through the trust boundary instead.** This is D4 doing exactly what it exists for — and it invents nothing on the creator's behalf:
+
 ```
-if the brief specifies placement:
-    enforce it as a normal rule          # demo brief: "near the beginning"
+brief states placement in words but gives no number
+        ↓
+compiler emits MUST_DISCLOSE with
+    within_first_seconds: null
+    needs_review: true
+        ↓
+the review screen renders the empty field and requires a value
+    → the spec is NOT approvable while it is null
+        ↓
+the number came from the USER, never from us
+        ↓
+validator: disclosure timestamp <= within_first_seconds ? PASS : FAIL
 
-else:
-    show the disclosure timestamp only
-
-    optional advisory, never a verdict:
+brief states no placement at all
+        ↓
+within_first_seconds stays null
+        ↓
+report presence + timestamp only. Optional advisory, never a verdict:
     ⚠ ADVISORY — Disclosure occurs at 00:47.
                  Review placement before sending.
 ```
+
+`samples/spec.approved.json` ships a **user-authored `within_first_seconds: 15`**. V1 discloses at 0.0–3.8s, so it passes with margin. Note in the README that the user chose that number.
 
 **No invented threshold.** Do not flag on "after 25% of the segment" or "after 30 seconds" or any other number we made up. Any rule not derived from the sponsor brief is a rule we are inventing on the creator's behalf, and it edges toward the legal-compliance claim `Rules.md` §8 bans.
 
@@ -371,14 +487,23 @@ else:
 
 ## 5.5 Readiness resolution
 
+Three mutually exclusive clauses. **Manual-review items appear in none of them.**
+
 ```
-any blocking (error) rule fails         → DO NOT SEND
-no blocking failure, warnings or
-  manual-review items exist             → REVIEW
-all blocking rules pass                 → SPONSOR READY
+any error-severity rule FAILS                       → DO NOT SEND
+
+no error-severity failure, but at least one
+  warning-severity rule FAILS                       → REVIEW
+
+all error-severity rules pass and no
+  warning-severity rule failed                      → SPONSOR READY
 ```
 
-`MANUAL REVIEW` items are excluded from the score, listed separately, and **never block** `SPONSOR READY`.
+`MANUAL REVIEW` items are excluded from the score, listed separately, and **never affect the readiness state** — not `REVIEW`, not `SPONSOR READY`.
+
+> **Why this is stated three times:** the demo brief *always* yields exactly one manual-review item (the on-screen visual requirement), and it survives every re-record. Any rule that lets a manual-review item reach `REVIEW` makes V3 resolve `REVIEW` **forever** — killing the payoff frame of the README GIF, `PRD.md` §6 test 19, and GATE 25:00. That failure would surface at T+23:30 during GIF capture, look like a logic bug rather than a spec bug, and there would be no time to re-record.
+
+All seven demo rules are `severity: error`, so the demo never produces a `REVIEW` at all: V1 is `DO NOT SEND`, V3 is `SPONSOR READY`.
 
 ### On the score
 
@@ -397,6 +522,48 @@ The binary state is what matters. The score is decoration.
 ---
 
 # 6. CLI surface
+
+## Invocation form — `python -m sponsorlint`, always
+
+**There is no `pyproject.toml`, no `setup.py`, no `pip install -e .`, and no `sponsorlint` console script.** The bare `sponsorlint demo` form does not exist and must not appear in the README, the GIF, or any acceptance criterion — a judge who copy-pastes it gets `'sponsorlint' is not recognized`, on the 60-second first impression.
+
+`python -m sponsorlint` works with zero packaging because Python puts the current directory on `sys.path` for `-m`. **All documented commands must be run from the repo root**; say so in the README quickstart.
+
+## Import discipline — this is what makes the zero-key path work
+
+`cli.py`, `__main__.py` and `models.py` may import at module scope **only** from `models`, `lint/`, `report/`, `normalize/` and `eval/` — modules whose entire dependency set is in `requirements-demo.txt`.
+
+`faster_whisper`, `pypdf` and the LLM client are imported **inside the command branch that needs them**:
+
+```python
+def main(argv):
+    cmd = argv[0]
+    if cmd in ("demo", "verify", "eval"):
+        from .lint.engine import run                    # demo deps only
+    elif cmd == "transcribe":
+        from .transcript.transcribe import transcribe    # faster-whisper HERE
+    elif cmd == "compile":
+        from .brief.extract import extract               # pypdf HERE
+```
+
+The same applies to `web/app.py`: the `/`, `/api/sample` and `/api/verify` routes must not pull a full-path import at module scope.
+
+> **Verified, not theorized.** Building this exact layout with a module-scope `from .transcript.transcribe import ...` and running `python -m sponsorlint demo` in a venv containing only the six demo packages dies with `ModuleNotFoundError: No module named 'faster_whisper'`, exit 1, **before dispatch runs**. Moving the import into its branch makes the identical command exit 0.
+>
+> **You will never see this locally** — your dev machine has faster-whisper installed. It surfaces at the clean-environment run at T+27:30, two hours before the deadline, after the README and GIF are already recorded.
+
+Guard it with a check that runs in Phase 4:
+
+```bash
+python -c "import ast,sys; m=ast.parse(open('sponsorlint/cli.py').read()); \
+bad=[n for n in ast.walk(m) if isinstance(n,(ast.Import,ast.ImportFrom)) and n.col_offset==0 \
+and any(x in ast.dump(n) for x in ('faster_whisper','pypdf','openai','anthropic'))]; \
+sys.exit(len(bad))"
+```
+
+*(Confirmed separately: bare `import faster_whisper` performs no network I/O and the Silero VAD onnx ships inside the wheel, so the "no download" claim is achievable. The transitive import is the only thing that breaks it.)*
+
+## Commands
 
 Decomposed so the project is debuggable and falsifiable in pieces.
 
@@ -513,7 +680,7 @@ pip install -r requirements-demo.txt
 python -m sponsorlint demo
 ```
 
-Runs the **real deterministic verifier** against `samples/spec.approved.json`, `samples/transcript.v1.json`, and `samples/video-metadata.v1.json`.
+Runs the **real deterministic verifier** against `samples/spec.approved.json` and `samples/transcript.v1.json` — the same two inputs `verify` takes, so the demo and the eval exercise identical code paths. Duration comes from `transcript.duration_seconds` (§4.3), which is why no ffmpeg is needed on the judge's machine.
 
 **No hardcoded verdicts.** The check executes for real; only the expensive, deterministic upstream steps are cached.
 
@@ -533,6 +700,21 @@ Before submission, run from a clean clone in a fresh virtualenv. The default dem
 ---
 
 # 9. The compiler prompt
+
+## Provider — decided, not deferred
+
+```
+package:  anthropic
+model:    claude-opus-5
+mechanism: structured outputs — pass the Spec Pydantic model directly,
+           so the API constraint and Pydantic validation are the same schema
+```
+
+Do not use an assistant prefill to force JSON; structured outputs is the mechanism.
+
+**Pre-flight this at `T+0:00–0:15`, not at Phase 5.** One live smoke call returning a two-field object. Phases 5 and 6 are five hours of work plus acceptance tests 10–14 and GATE 12:00 — all resting on an external dependency. If the key is missing or out of credit, you want to know at minute ten, not hour seven. **If the smoke call fails, Phase 5 is cut and the committed hand-written spec carries the demo** — the zero-key path does not need the compiler at all.
+
+## The prompt
 
 Lives in `sponsorlint/brief/prompt.py`, versioned with the code.
 

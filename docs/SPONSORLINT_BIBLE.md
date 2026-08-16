@@ -1,7 +1,7 @@
 # SPONSORLINT — THE BIBLE
 ## Scope Contract · Architecture · Build Phases · Validation · Demo Strategy · Agent Guardrails
 
-**Status:** REFERENCE NARRATIVE — the whole plan in one file. **Not the authority.**
+**Status:** ⚠️ **STALE** as of Aug 16, 2026 — narrative and strategy still accurate, **technical spec is not.** Not the authority.
 **Hackathon:** Social Media Automation Hackathon
 **Deadline:** Aug 17, 2026 @ 4:30 AM IST
 **Judging:** Functionality 30% · Real-world usefulness 30% · Creativity 20% · Technical execution 20%
@@ -34,7 +34,28 @@ This is the **single-file reference narrative**: the entire plan, readable end t
 
 Nothing is implemented from this file. Implement from `PRD.md` + `Architecture.md`, sequence from `Phases.md`, and stay inside `Rules.md`.
 
-## Why this file can still be trusted
+## ⚠️ What is stale in here — do not implement from these sections
+
+The Aug 16 hardening pass (`Decisions.md` D21) closed nine implementation blockers. **This file predates all of them.** Its problem framing, positioning, demo narrative and phase philosophy are still sound; its technical specification is wrong in these nine places:
+
+| Stale here | Correct source |
+|---|---|
+| `rapidfuzz.ratio ≥ 90` | `Architecture.md` §5.2 — `ratio` scores true matches 10–67 and **can never pass**. Use `fuzz.partial_ratio` on the **joined** transcript |
+| No haystack defined for phrase matching | `Architecture.md` §5.2 — joined transcript, never per-segment (measured 70.6 vs 100.0) |
+| Rule schema with one scalar `expected` | `Architecture.md` §4.1 — pinned model with per-type payload |
+| `DURATION` uses ffprobe | `Architecture.md` §4.3 / §5.3 — reads `transcript.duration_seconds`; validators never shell out |
+| `video-metadata.v1.json` | Deleted. Two fixtures, not three |
+| Disclosure placement enforcement | `Architecture.md` §5.4 — `within_first_seconds`, user-supplied through the review screen |
+| `sponsorlint <cmd>` | `Architecture.md` §6 — `python -m sponsorlint`, no packaging exists |
+| No import discipline | `Architecture.md` §6 — module-scope `faster_whisper` import kills the zero-key demo |
+| `2 FAIL · 1 WARN · 4 PASS` | `PRD.md` §5 — **`3 FAIL · 0 WARN · 4 PASS · 1 MANUAL` → 4/7** |
+| Readiness ladder sends manual review → `REVIEW` | `Architecture.md` §5.5 — manual review **never** affects state, or V3 can never reach `SPONSOR READY` |
+
+Also missing here: the canonical seven-rule spec (`PRD.md` §5), the spoken-numeral algorithm (`Architecture.md` §5.1), the LLM provider decision (§9), and the reflowed phase clock with per-gate recovery (`Phases.md`).
+
+**Read this file for the why. Implement from the root documents.**
+
+## Why the rest can still be trusted
 
 It was reconciled with the root documents on Aug 15, 2026 and carries the four freeze corrections in `Decisions.md` D19: the validator taxonomy (§10), no invented disclosure threshold (§12), `False FAIL` / `False PASS` terminology (§16), and no engineered scores (§9).
 

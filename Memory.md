@@ -78,7 +78,7 @@ Mirrors `PRD.md` §6. Check off only when actually verified, not when believed.
 ☐  6  Spoken URL normalizes
 ☐  7  Spoken promo code normalizes
 ☐  8  Disclosure detected with timestamp
-☐  9  ffprobe duration validation
+☐  9  DURATION reads transcript.duration_seconds (validator never shells out)
 ☐ 10  Prose brief compiles to valid schema
 ☐ 11  Every rule carries source_quote
 ☐ 12  Unverifiable requirements → MANUAL REVIEW
@@ -102,10 +102,12 @@ Pinned so nobody has to re-derive them.
 |---|---|
 | Fictional brand | `Aegis VPN` · `aegisvpn.com/alex` · `Shield Mode` · `73%` · `HARSH20` |
 | Planted errors in V1 | "seventy percent" (~0:43) · no "Shield Mode" · "completely anonymous" (~0:31) |
-| Expected V1 verdict | 2 FAIL · 1 WARN · 4 PASS · 1 MANUAL → `DO NOT SEND` |
+| Expected V1 verdict | 3 FAIL · 0 WARN · 4 PASS · 1 MANUAL → `4/7` → `DO NOT SEND` |
 | Transcript fixture | `samples/transcript.v1.json` — **cached, never re-run Whisper in dev** |
 | Whisper config | `faster-whisper`, `base.en`, **CPU only, no GPU path** |
-| Demo command | `python -m sponsorlint demo` — no key, no download |
+| Fuzzy scorer | `rapidfuzz.fuzz.partial_ratio` >= 90 on the **joined** transcript. Never `ratio`, never `partial_token_set_ratio` |
+| Canonical spec | 7 rules, all `severity: error` — see `PRD.md` §5 |
+| Demo command | `python -m sponsorlint demo` — no key, no download, run from repo root |
 | Never cut | eval number · zero-key demo · README |
 
 ---
@@ -113,6 +115,15 @@ Pinned so nobody has to re-derive them.
 ## Session log
 
 *Newest first. One block per working session.*
+
+### Session 1 — hardening · Aug 16, 2026
+
+- Six-lens survey of the frozen docs, scoped to `Rules.md` §0. Nine distinct blockers found and closed (`Decisions.md` D21)
+- **Measured, not argued:** `rapidfuzz.ratio` scores every true match 10–67 — the specified matcher could never have passed anything. Now `partial_ratio` on the joined transcript
+- **Verified by building it:** a module-scope faster-whisper import kills `demo` in a demo-only venv before dispatch. Import discipline + AST check added
+- Fixed: V1 verdict is `3 FAIL · 0 WARN · 4 PASS · 1 MANUAL` (was wrong in 4 files) · V3 could never reach SPONSOR READY · Rule schema couldn't hold DURATION/multi-phrase/placement · DURATION had 3 duration sources · two invocation forms
+- Canonical 7-rule spec pinned in `PRD.md` §5. Phase clock reflowed; Phase 0 rebudgeted 45→95 min; per-gate failure recovery added
+- **Still no code written**
 
 ### Session 0 — planning · Aug 15, 2026
 

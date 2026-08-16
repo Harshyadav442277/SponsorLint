@@ -34,7 +34,6 @@ USAGE = """SponsorLint — pre-flight QA for sponsored YouTube integrations.
   python -m sponsorlint eval                    validator accuracy over labeled fixtures
   python -m sponsorlint compile BRIEF           brief -> proposed spec (needs an API key)
   python -m sponsorlint transcribe VIDEO        video -> transcript (needs ffmpeg)
-  python -m sponsorlint analyze BRIEF VIDEO     the full flow
   python -m sponsorlint serve                   the web UI
 
 Run from the repo root. `demo` and `eval` need no API key, no model download
@@ -65,7 +64,6 @@ def main(argv: list[str] | None = None) -> int:
         "eval": _eval,
         "compile": _compile,
         "transcribe": _transcribe,
-        "analyze": _analyze,
         "serve": _serve,
     }
 
@@ -246,59 +244,6 @@ def _transcribe(argv: list[str]) -> int:
     else:
         print(payload)
     return 0
-
-
-# --------------------------------------------------------------------------
-# analyze — the full flow
-# --------------------------------------------------------------------------
-
-
-def _analyze(argv: list[str]) -> int:
-    parser = argparse.ArgumentParser(prog="python -m sponsorlint analyze")
-    parser.add_argument("brief")
-    parser.add_argument("video")
-    parser.add_argument("--model", default="base.en")
-    parser.add_argument("--yes", action="store_true",
-                        help="skip the spec review step (not recommended)")
-    args = parser.parse_args(argv)
-
-    from .brief.compile import CompileError, compile_brief
-    from .brief.extract import ExtractError, extract_text
-    from .lint.engine import run
-    from .report.terminal import render
-    from .transcript.transcribe import TranscribeError, transcribe
-
-    print("· Extracting brief text")
-    try:
-        text = extract_text(Path(args.brief))
-    except ExtractError as exc:
-        raise SponsorLintError(str(exc)) from exc
-
-    print("· Compiling requirements")
-    try:
-        spec = compile_brief(text)
-    except CompileError as exc:
-        raise SponsorLintError(str(exc)) from exc
-
-    blockers = spec.approval_blockers()
-    if blockers and not args.yes:
-        print("\nThis spec is not approvable yet — the compiler needs your input:\n")
-        for blocker in blockers:
-            print(f"  · {blocker}")
-        print("\nOpen the review screen to resolve it:  python -m sponsorlint serve")
-        print("Or re-run with --yes to check only the rules that are complete.")
-        return 2
-
-    print("· Transcribing sponsor segment")
-    try:
-        transcript = transcribe(Path(args.video), model_size=args.model)
-    except TranscribeError as exc:
-        raise SponsorLintError(str(exc)) from exc
-
-    print("· Running checks\n")
-    report = run(spec, transcript)
-    render(report)
-    return 1 if report.status == "DO_NOT_SEND" else 0
 
 
 # --------------------------------------------------------------------------

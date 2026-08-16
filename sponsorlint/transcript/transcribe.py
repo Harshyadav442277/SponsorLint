@@ -1,6 +1,6 @@
 """faster-whisper wrapper. `base.en`, CPU, no GPU code path.
 
-Imported only from the `transcribe` and `analyze` command branches — never at
+Imported only from the `transcribe` command branch and web upload route — never at
 module scope on the demo path.
 
 Transcribe once, cache forever: the resulting JSON is the fixture every

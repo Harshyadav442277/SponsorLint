@@ -42,12 +42,18 @@ def test_main_switches_legacy_windows_stdio_to_utf8(monkeypatch):
 
 def test_compile_setup_error_is_readable(monkeypatch, capsys):
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
-    brief = Path(__file__).resolve().parents[1] / "samples" / "brief.pdf"
+    brief = Path(__file__).resolve().parents[1] / "samples" / "brief.md"
 
     assert cli.main(["compile", str(brief)]) == 2
     error = capsys.readouterr().err
     assert "ANTHROPIC_API_KEY is not set" in error
     assert "Traceback" not in error
+
+
+def test_analyze_side_door_is_not_a_command(capsys):
+    assert cli.main(["analyze", "brief.md", "cut.mp4", "--yes"]) == 2
+    error = capsys.readouterr().err
+    assert "Unknown command: analyze" in error
 
 
 def test_transcribe_missing_file_error_is_readable(tmp_path, capsys):

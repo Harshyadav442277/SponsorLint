@@ -1,6 +1,6 @@
 """Brief -> clean text. PDF via pypdf, markdown and plain text directly.
 
-Imported only from the `compile` and `analyze` command branches.
+Imported only from the `compile` command branch and web compile route.
 """
 
 from __future__ import annotations

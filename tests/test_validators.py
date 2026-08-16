@@ -77,6 +77,49 @@ def test_campaign_url_and_closing_cta_are_distinct_checks():
     assert closing_cta.timestamp == 20.0
 
 
+def test_closing_cta_uses_a_later_valid_occurrence():
+    tx = Transcript.model_validate({
+        "duration_seconds": 74,
+        "segments": [
+            {"start": 10, "end": 14, "text": "Visit aegisvpn.com/alex now."},
+            {"start": 65, "end": 69, "text": "Again, aegisvpn.com/alex to sign up."},
+        ],
+    })
+    result = check_rule(
+        Rule.model_validate({
+            "id": "c",
+            "type": "URL_OR_CTA",
+            "label": "Closing call to action",
+            "source_quote": "Close with the campaign URL.",
+            "expected": "aegisvpn.com/alex",
+            "within_last_seconds": 15,
+        }),
+        tx,
+    )
+    assert result.status == "PASS"
+    assert result.timestamp == 65
+
+
+def test_closing_window_larger_than_transcript_includes_the_whole_transcript():
+    tx = Transcript.model_validate({
+        "duration_seconds": 10,
+        "segments": [{"start": 0, "end": 4, "text": "Visit aegisvpn.com/alex."}],
+    })
+    result = check_rule(
+        Rule.model_validate({
+            "id": "c",
+            "type": "URL_OR_CTA",
+            "label": "Closing call to action",
+            "source_quote": "Close with the campaign URL.",
+            "expected": "aegisvpn.com/alex",
+            "within_last_seconds": 15,
+        }),
+        tx,
+    )
+    assert result.status == "PASS"
+    assert result.timestamp == 0
+
+
 def test_invalid_prefix_does_not_mask_a_later_valid_whisper_typo():
     result = check_rule(
         Rule.model_validate({
@@ -111,6 +154,31 @@ def test_same_length_substitution_is_not_a_required_mention():
         Transcript.model_validate({
             "duration_seconds": 10,
             "segments": [{"start": 1, "end": 4, "text": "Try Shield Node."}],
+        }),
+    )
+    assert result.status == "FAIL"
+
+
+@pytest.mark.parametrize(
+    "wording",
+    [
+        "This video is unsponsored by Aegis.",
+        "We used to be sponsored by Aegis.",
+        "Someone asked if this was sponsored by Aegis.",
+        "Was this sponsored by Aegis?",
+    ],
+)
+def test_non_affirmative_sponsorship_wording_is_not_a_disclosure(wording):
+    result = check_rule(
+        Rule.model_validate({
+            "id": "d",
+            "type": "MUST_DISCLOSE",
+            "label": "Sponsorship disclosure",
+            "source_quote": "Include a sponsorship disclosure.",
+        }),
+        Transcript.model_validate({
+            "duration_seconds": 10,
+            "segments": [{"start": 1, "end": 4, "text": wording}],
         }),
     )
     assert result.status == "FAIL"

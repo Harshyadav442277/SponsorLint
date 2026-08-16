@@ -1,5 +1,5 @@
 {
-  "description": "39 labeled validator cases. Pure text, no video, no Whisper, no API calls. These are also the unit tests: written once, used twice (Rules.md §4). Every case is labeled with the GROUND TRUTH — what the creator actually did — not with what SponsorLint happens to return. A case SponsorLint gets wrong stays in the set and shows up in the metrics.",
+  "description": "46 labeled validator cases. Pure text, no video, no Whisper, no API calls. These are also the unit tests: written once, used twice (Rules.md §4). Every case is labeled with the GROUND TRUTH — what the creator actually did — not with what SponsorLint happens to return. A case SponsorLint gets wrong stays in the set and shows up in the metrics.",
   "cases": [
     {
       "id": "must_say/straddles-segment-break",
@@ -173,6 +173,27 @@
       "expected": "FAIL"
     },
     {
+      "id": "url_or_cta/hard-negative-longer-slug",
+      "note": "HARD NEGATIVE. The expected creator slug must not match as a prefix of a different creator slug.",
+      "rule": {"id": "f", "type": "URL_OR_CTA", "label": "Campaign URL spoken", "source_quote": "and should be directed to aegisvpn.com/alex", "expected": "aegisvpn.com/alex"},
+      "transcript": {"duration_seconds": 75.0, "segments": [{"start": 48.0, "end": 52.0, "text": "Go to aegisvpn.com/alexander and sign up."}]},
+      "expected": "FAIL"
+    },
+    {
+      "id": "url_or_cta/hard-negative-deeper-domain",
+      "note": "HARD NEGATIVE. An attacker-controlled suffix cannot extend the expected URL and still pass.",
+      "rule": {"id": "f", "type": "URL_OR_CTA", "label": "Campaign URL spoken", "source_quote": "and should be directed to aegisvpn.com/alex", "expected": "aegisvpn.com/alex"},
+      "transcript": {"duration_seconds": 75.0, "segments": [{"start": 48.0, "end": 52.0, "text": "Go to aegisvpn.com/alex.evil.com and sign up."}]},
+      "expected": "FAIL"
+    },
+    {
+      "id": "url_or_cta/hard-negative-deeper-spoken-path",
+      "note": "HARD NEGATIVE. A spoken path continuation is a different destination.",
+      "rule": {"id": "f", "type": "URL_OR_CTA", "label": "Campaign URL spoken", "source_quote": "and should be directed to aegisvpn.com/alex", "expected": "aegisvpn.com/alex"},
+      "transcript": {"duration_seconds": 75.0, "segments": [{"start": 48.0, "end": 52.0, "text": "Go to aegisvpn.com/alex slash billing and sign up."}]},
+      "expected": "FAIL"
+    },
+    {
       "id": "url_or_cta/hard-negative-url-only-before-closing",
       "note": "The campaign URL was spoken, but not during the final 15 seconds required by this closing-CTA rule.",
       "rule": {"id": "f", "type": "URL_OR_CTA", "label": "Closing call to action", "source_quote": "The closing should include a direct call to action telling viewers to visit the campaign URL.", "expected": "aegisvpn.com/alex", "within_last_seconds": 15},
@@ -234,6 +255,34 @@
       "note": "HARD NEGATIVE. A counterfactual wish is not a sponsorship disclosure.",
       "rule": {"id": "f", "type": "MUST_DISCLOSE", "label": "Sponsorship disclosure", "source_quote": "Please disclose the sponsorship.", "within_first_seconds": 15},
       "transcript": {"duration_seconds": 75.0, "segments": [{"start": 1.0, "end": 5.0, "text": "I wish this video was sponsored by Aegis VPN."}]},
+      "expected": "FAIL"
+    },
+    {
+      "id": "disclosure/hard-negative-unsponsored-substring",
+      "note": "HARD NEGATIVE. The word unsponsored contains sponsored but is the opposite of a disclosure.",
+      "rule": {"id": "f", "type": "MUST_DISCLOSE", "label": "Sponsorship disclosure", "source_quote": "Please disclose the sponsorship.", "within_first_seconds": 15},
+      "transcript": {"duration_seconds": 75.0, "segments": [{"start": 1.0, "end": 5.0, "text": "This video is unsponsored by Aegis VPN."}]},
+      "expected": "FAIL"
+    },
+    {
+      "id": "disclosure/hard-negative-past-relationship",
+      "note": "HARD NEGATIVE. A past sponsorship relationship does not disclose the current video.",
+      "rule": {"id": "f", "type": "MUST_DISCLOSE", "label": "Sponsorship disclosure", "source_quote": "Please disclose the sponsorship.", "within_first_seconds": 15},
+      "transcript": {"duration_seconds": 75.0, "segments": [{"start": 1.0, "end": 5.0, "text": "We used to be sponsored by Aegis VPN."}]},
+      "expected": "FAIL"
+    },
+    {
+      "id": "disclosure/hard-negative-reported-question",
+      "note": "HARD NEGATIVE. Reporting someone else's question is not an affirmative disclosure.",
+      "rule": {"id": "f", "type": "MUST_DISCLOSE", "label": "Sponsorship disclosure", "source_quote": "Please disclose the sponsorship.", "within_first_seconds": 15},
+      "transcript": {"duration_seconds": 75.0, "segments": [{"start": 1.0, "end": 5.0, "text": "Someone asked if this was sponsored by Aegis VPN."}]},
+      "expected": "FAIL"
+    },
+    {
+      "id": "disclosure/hard-negative-inverted-question",
+      "note": "HARD NEGATIVE. Asking whether a video was sponsored is not an affirmative disclosure.",
+      "rule": {"id": "f", "type": "MUST_DISCLOSE", "label": "Sponsorship disclosure", "source_quote": "Please disclose the sponsorship.", "within_first_seconds": 15},
+      "transcript": {"duration_seconds": 75.0, "segments": [{"start": 1.0, "end": 5.0, "text": "Was this sponsored by Aegis VPN?"}]},
       "expected": "FAIL"
     },
     {

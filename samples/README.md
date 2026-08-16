@@ -21,9 +21,16 @@ The committed demo campaign. These files are what `python -m sponsorlint demo` r
 > Once `sponsor-cut-v1.mp4` and `sponsor-cut-v3.mp4` are recorded, regenerate both:
 >
 > ```bash
-> python -m sponsorlint transcribe samples/sponsor-cut-v1.mp4 -o samples/transcript.v1.json
-> python -m sponsorlint transcribe samples/sponsor-cut-v3.mp4 -o samples/transcript.v3.json
+> python -m sponsorlint transcribe samples/sponsor-cut-v1.mp4 -o samples/transcript.v1.whisper.json
+> python -m sponsorlint transcribe samples/sponsor-cut-v3.mp4 -o samples/transcript.v3.whisper.json
+> python -m sponsorlint verify --spec samples/spec.approved.json --transcript samples/transcript.v1.whisper.json
+> python -m sponsorlint verify --spec samples/spec.approved.json --transcript samples/transcript.v3.whisper.json
 > ```
+>
+> The first verification is expected to exit 1 with `4/7 DO NOT SEND`; the second
+> should exit 0 with `7/7 SPONSOR READY`. Inspect both candidate transcripts and
+> confirm all six critical strings from `script.md` are recognizable before replacing
+> the committed `transcript.v1.json` and `transcript.v3.json` fixtures.
 >
 > Nothing else changes — the verdict is computed from whatever the transcript says.
 > That is the whole point of `Rules.md` §1.11.

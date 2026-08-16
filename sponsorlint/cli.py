@@ -199,11 +199,14 @@ def _compile(argv: list[str]) -> int:
     parser.add_argument("-o", "--out", help="write the proposed spec here")
     args = parser.parse_args(argv)
 
-    from .brief.compile import compile_brief  # LLM client imported here
-    from .brief.extract import extract_text  # pypdf imported here
+    from .brief.compile import CompileError, compile_brief  # LLM client imported here
+    from .brief.extract import ExtractError, extract_text  # pypdf imported here
 
-    text = extract_text(Path(args.brief))
-    spec = compile_brief(text)
+    try:
+        text = extract_text(Path(args.brief))
+        spec = compile_brief(text)
+    except (CompileError, ExtractError) as exc:
+        raise SponsorLintError(str(exc)) from exc
     payload = json.dumps(spec.model_dump(exclude_none=True), indent=2)
 
     if args.out:
@@ -228,9 +231,12 @@ def _transcribe(argv: list[str]) -> int:
     parser.add_argument("--model", default="base.en")
     args = parser.parse_args(argv)
 
-    from .transcript.transcribe import transcribe  # faster-whisper imported here
+    from .transcript.transcribe import TranscribeError, transcribe  # faster-whisper imported here
 
-    transcript = transcribe(Path(args.video), model_size=args.model)
+    try:
+        transcript = transcribe(Path(args.video), model_size=args.model)
+    except TranscribeError as exc:
+        raise SponsorLintError(str(exc)) from exc
     payload = json.dumps(transcript.model_dump(), indent=2)
 
     if args.out:
@@ -256,17 +262,23 @@ def _analyze(argv: list[str]) -> int:
                         help="skip the spec review step (not recommended)")
     args = parser.parse_args(argv)
 
-    from .brief.compile import compile_brief
-    from .brief.extract import extract_text
+    from .brief.compile import CompileError, compile_brief
+    from .brief.extract import ExtractError, extract_text
     from .lint.engine import run
     from .report.terminal import render
-    from .transcript.transcribe import transcribe
+    from .transcript.transcribe import TranscribeError, transcribe
 
     print("· Extracting brief text")
-    text = extract_text(Path(args.brief))
+    try:
+        text = extract_text(Path(args.brief))
+    except ExtractError as exc:
+        raise SponsorLintError(str(exc)) from exc
 
     print("· Compiling requirements")
-    spec = compile_brief(text)
+    try:
+        spec = compile_brief(text)
+    except CompileError as exc:
+        raise SponsorLintError(str(exc)) from exc
 
     blockers = spec.approval_blockers()
     if blockers and not args.yes:
@@ -278,7 +290,10 @@ def _analyze(argv: list[str]) -> int:
         return 2
 
     print("· Transcribing sponsor segment")
-    transcript = transcribe(Path(args.video), model_size=args.model)
+    try:
+        transcript = transcribe(Path(args.video), model_size=args.model)
+    except TranscribeError as exc:
+        raise SponsorLintError(str(exc)) from exc
 
     print("· Running checks\n")
     report = run(spec, transcript)

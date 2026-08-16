@@ -29,9 +29,9 @@ This file exists so a fresh agent — new chat, new tool, new context window —
 ## Current state
 
 ```
-Phase:            10 complete in code. Blocked only on the recording.
-Last gate passed: Windows CLI + four-screen browser reproduction
-Clock:            built and hardened across three sessions, Aug 16 2026
+Phase:            10 complete in code. External gates need a recording and API key.
+Last gate passed: Full dependency install + base.en CPU initialization
+Clock:            built and hardened across four sessions, Aug 16 2026
 Submittable:      YES — Phase 4 gate and canonical browser arc verified
 ```
 
@@ -40,23 +40,25 @@ Submittable:      YES — Phase 4 gate and canonical browser arc verified
 - `python -m sponsorlint demo` → `3 FAIL · 0 WARN · 4 PASS · 1 MANUAL` → `4/7` → `DO NOT SEND`
 - `python -m sponsorlint demo --arc` → `V1 4/7 DO NOT SEND` → `V3 7/7 SPONSOR READY`
 - `python -m sponsorlint eval` → 30 fixtures, 29 correct, **96.7%**, 0 False PASSes, 1 False FAIL
-- `python -m pytest tests -q` → **109 passed, 1 xfailed** in ~0.5s
+- `python -m pytest tests -q` → **111 passed, 1 xfailed** in ~1.7s
 - `python -m sponsorlint serve` → full four-screen flow drives end to end in a browser
 - All six validators, the engine, normalization, the eval harness, the terminal report
 - `compile` / `transcribe` / `analyze` are written but **not exercised live** (no key, no video)
 
-**Verified in fresh `.venv-current` on Windows (demo + test dependencies):**
+**Verified in fresh `.venv-current` on Windows (full development dependencies):**
 
 - `demo` and `eval` both run and exit 0
 - `demo --arc` renders Unicode terminal output under Windows without a CP-1252 crash
 - API regression test drives sample → approve → V1 → V3 → stored report
 - In-app browser drives all four screens to both canonical verdicts with no console warnings/errors
 - AST scan still finds zero module-scope `faster_whisper` / `pypdf` / `anthropic` / `torch` imports on the demo path
+- `faster-whisper` and `anthropic` install cleanly; `base.en` is downloaded, cached, and initializes on CPU with `int8`
+- Missing-key and missing-video failures are readable CLI errors with exit code 2, not tracebacks
 - The earlier `.venv-judge` no-ffmpeg reproduction remains historical evidence; its Python 3.12 base was removed from this machine, so its launcher is now stale
 
-**Next action:** record `samples/sponsor-cut-v1.mp4` from `samples/script.md`, then
-`python -m sponsorlint transcribe samples/sponsor-cut-v1.mp4 -o samples/transcript.v1.json`.
-Nothing else changes — the verdict is computed from whatever the transcript says.
+**Next action:** record `samples/sponsor-cut-v1.mp4` and `samples/sponsor-cut-v3.mp4`
+from `samples/script.md`, then follow the candidate-transcript commands in
+`samples/README.md`. Do not overwrite the authored fixtures before the six-string gate passes.
 
 ---
 
@@ -145,6 +147,17 @@ Pinned so nobody has to re-derive them.
 
 *Newest first. One block per working session.*
 
+### Session 4 — real-input preflight · Aug 16, 2026
+
+- Installed the full `requirements.txt` stack in `.venv-current`, including `faster-whisper` and `anthropic`
+- Downloaded and initialized the pinned `base.en` Whisper model on CPU with `int8`; the model is cached locally and ready for the recording
+- Confirmed `samples/brief.pdf` extracts successfully; the live compiler remains correctly blocked because `ANTHROPIC_API_KEY` is not set
+- Confirmed against the current official Anthropic docs and installed SDK 0.122.0 that `claude-opus-5`, `messages.parse(...)`, Pydantic `output_format`, and `parsed_output` are all valid
+- Fixed `compile`, `transcribe`, and `analyze` so expected setup failures return readable exit-code-2 messages instead of Python tracebacks; added two regression tests
+- Corrected GATE 2:00 from seven spoken strings to six: `HARSH20` is a normalization fixture, not a requirement in the frozen brief/spec/script
+- Added a safe `.whisper.json` candidate workflow so first-pass transcription cannot overwrite the authored demo fixtures
+- Final gate: **111 passed, 1 intentional xfail**
+
 ### Session 3 — Windows hardening + browser QA · Aug 16, 2026
 
 - Preserved the existing untracked build and created `.venv-current` from the bundled Python 3.12 runtime after discovering that `.venv` and `.venv-judge` point to a removed interpreter
@@ -208,7 +221,7 @@ Built the whole thing, in the phase order `Phases.md` specifies, verifying each 
 [ISSUE] Recording does not exist yet
   where:  samples/sponsor-cut-v1.mp4, samples/sponsor-cut-v3.mp4
   repro:  ls samples/*.mp4
-  impact: GATE 2:00 (Whisper hears all seven critical strings) is UNTESTED.
+  impact: GATE 2:00 (Whisper hears all six critical strings) is UNTESTED.
           `aegisvpn.com/alex` is a fabricated brand name base.en may mangle -- if it
           does, reword the script BEFORE recording, per Phases.md.
   status: open. Blocks acceptance tests 15 and the real GATE 9.
@@ -281,6 +294,11 @@ a readable error, which is what `Rules.md` §3 asks for anyway.
 jump-to-timestamp is cut #2 in `Rules.md` §9. The button is still a real keyboard-reachable
 `<button>`; clicking copies `00:43` so it can be pasted into an editor timeline.
 
+**D-11 · GATE 2:00 checks six spoken strings, not seven.** `Phases.md` had added `HARSH20`
+to the recording gate even though the frozen demo brief, canonical spec, and script never mention
+that code. Promo-code normalization remains covered by acceptance test 7 and its labeled fixtures;
+requiring it in the recording would invent a sponsor requirement and contradict `Rules.md` §1.1.
+
 ---
 
 ## Cut log
@@ -299,6 +317,6 @@ Cut order from `Rules.md` §9: demo video → jump-to-timestamp → UI polish �
 
 > Everything is built and the zero-key path is verified in a clean demo-only venv — the project is
 > submittable as it stands. The one missing artifact is the recording: write it from
-> `samples/script.md`, check GATE 2:00 (all seven critical strings, both columns) *before*
+> `samples/script.md`, check GATE 2:00 (all six critical strings, both columns) *before*
 > committing to the take, then regenerate both transcripts with `transcribe`. Read
 > **Deviations D-1** first — the committed transcripts are authored fixtures, and the README says so.

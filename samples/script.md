@@ -43,7 +43,7 @@ Expected verdict: **0 FAIL · 7 PASS · 1 MANUAL REVIEW → 7/7 → SPONSOR READ
 
 ## Before you commit to this script — GATE 2:00
 
-Transcribe the seven critical strings with `base.en` and confirm each is
+Transcribe the six critical strings with `base.en` and confirm each is
 recognizable. If any is mangled, change the wording **now**.
 
 | must be *caught* | must be *recognized* |

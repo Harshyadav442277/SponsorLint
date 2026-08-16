@@ -76,13 +76,13 @@ python -m venv .venv
 
 Agent C (UI) has nothing to do until Phase 8. **Nothing an agent writes here may need the video.**
 
-> **GATE 2:00** — brief and V1 exist, and `base.en` transcribes **all seven** critical strings recognizably:
+> **GATE 2:00** — brief and V1 exist, and `base.en` transcribes **all six** critical strings recognizably:
 >
 > | Must be *caught* | Must be *recognized* |
 > |---|---|
 > | "seventy percent" | "Shield Mode" |
 > | "completely anonymous" | "aegisvpn.com/alex" |
-> | the disclosure phrase | "seventy-three percent" · "HARSH20" |
+> | the disclosure phrase | "seventy-three percent" |
 >
 > The old gate tested only the left column — the strings that must FAIL. But V3 reaching 7/7 depends entirely on the right column, and `aegisvpn.com/alex` is a fabricated brand name `base.en` may well mangle. **If any string in the right column is unrecognizable, change the script now.** Discovering it at Phase 7 or Phase 9 means the arc can never reach `SPONSOR READY`.
 
@@ -264,7 +264,7 @@ Optional 90-second demo video **only if the README is already excellent**. Submi
 | Phase | Window | Delivers | Gate |
 |---|---|---|---|
 | — | 0:00–0:25 | Repo, deps, **pre-flight** | Fresh venv installs, base.en cached, ffprobe + LLM checked |
-| 0 | 0:25–2:00 | Brief, script, V1 **+ V3 lines** | Whisper hears all 7 critical strings |
+| 0 | 0:25–2:00 | Brief, script, V1 **+ V3 lines** | Whisper hears all 6 critical strings |
 | 1 | 2:00–3:10 | Vertical slice | One real verdict |
 | 2 | 3:10–4:15 | Six validators | All produce verdicts on V1 |
 | 3 | 4:15–6:15 | Normalization + eval | Real metrics printed |

@@ -124,7 +124,7 @@ assertions the unit tests use — written once, used twice.
 
 ```bash
 python -m sponsorlint eval --verbose   # every case, pass or miss
-python -m pytest tests -q              # 109 tests (needs requirements.txt)
+python -m pytest tests -q              # 111 tests (needs requirements.txt)
 ```
 
 ---
@@ -287,7 +287,7 @@ sponsorlint/
 ├── report/              ANSI terminal · web template context
 └── web/                 FastAPI + Jinja2 + vanilla JS, no build step
 samples/                 the committed Aegis VPN campaign
-tests/                   109 tests, ~0.5s
+tests/                   111 tests, ~1.7s
 ```
 
-The brand, campaign, URL and promo code in `samples/` are fictional.
+The brand, campaign, URL and promo code used by the project are fictional.

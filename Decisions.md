@@ -274,6 +274,11 @@ Aug 16, 2026. A six-lens survey of the frozen documents, scoped strictly to `Rul
 
 **One gate was strengthened, not just fixed.** GATE 2:00 previously tested only the strings that must be *caught*. It now also tests the strings that must be *recognized* — `"Shield Mode"`, `aegisvpn.com/alex`, `"seventy-three percent"`, `HARSH20`. V3 reaching 7/7 depends entirely on those, and `aegisvpn.com/alex` is a fabricated name `base.en` may mangle. Discovering that at Phase 9 means the arc can never close.
 
+**Correction, Session 4:** `HARSH20` is exercised by the promo-code normalization
+acceptance test, but it is not present in the frozen demo brief, canonical seven-rule
+spec, or recording script. GATE 2:00 therefore has six spoken strings, not seven;
+requiring a seventh would force the recording to invent a requirement the brief never made.
+
 ---
 
 ## Open questions

@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: sponsorlint
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /healthz
+    autoDeployTrigger: checksPass
+    domains:
+      - sponsorlint.xyz
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false

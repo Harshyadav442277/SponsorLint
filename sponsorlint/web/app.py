@@ -45,6 +45,7 @@ templates = Jinja2Templates(directory=str(HERE / "templates"))
 #: uuid -> Spec / Report. In-memory only; restarting clears it.
 SPECS: dict[str, Spec] = {}
 REPORTS: dict[str, dict] = {}
+REPORT_TRANSCRIPTS: dict[str, Transcript] = {}
 
 
 @app.middleware("http")
@@ -70,6 +71,12 @@ async def reject_cross_origin_writes(request: Request, call_next):
 @app.get("/")
 async def index(request: Request):
     return templates.TemplateResponse(request, "index.html")
+
+
+@app.get("/healthz")
+async def health():
+    """Small deployment probe that does not import optional media/LLM packages."""
+    return {"status": "ok"}
 
 
 # --------------------------------------------------------------------------
@@ -207,6 +214,7 @@ async def verify(
     report_id = uuid.uuid4().hex
     context = report_context(report)
     _remember(REPORTS, report_id, context)
+    _remember(REPORT_TRANSCRIPTS, report_id, transcript)
     return {"report_id": report_id, "report": context}
 
 
@@ -285,6 +293,52 @@ async def get_report(report_id: str):
     if report is None:
         raise HTTPException(404, "No such report.")
     return report
+
+
+@app.post("/api/report/{report_id}/confirm-manual")
+async def confirm_manual(report_id: str, payload: dict):
+    """Confirm one visual item and rerun the exact saved transcript.
+
+    Keeping the transcript beside the report makes this work for both committed
+    samples and freshly uploaded media; the browser never fabricates readiness.
+    """
+    transcript = REPORT_TRANSCRIPTS.get(report_id)
+    if transcript is None or report_id not in REPORTS:
+        raise HTTPException(404, "That verification run is no longer in memory. Check the cut again.")
+
+    try:
+        spec = Spec.model_validate(payload.get("spec") or {})
+    except ValidationError as exc:
+        return JSONResponse({"detail": _readable(exc)}, status_code=400)
+
+    index = payload.get("index")
+    if isinstance(index, bool) or not isinstance(index, int):
+        raise HTTPException(400, "Choose a valid manual-review item.")
+    if index < 0 or index >= len(spec.manual_review):
+        raise HTTPException(400, "That manual-review item does not exist.")
+    if not spec.rules:
+        raise HTTPException(400, "No requirements to check. Add at least one rule.")
+    blockers = spec.approval_blockers()
+    if blockers:
+        return JSONResponse({"detail": "\n".join(blockers), "blockers": blockers}, status_code=400)
+
+    spec.manual_review[index].confirmed = True
+    try:
+        report = run(spec, transcript)
+    except SpecError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+    spec_id = uuid.uuid4().hex
+    next_report_id = uuid.uuid4().hex
+    context = report_context(report)
+    _remember(SPECS, spec_id, spec)
+    _remember(REPORTS, next_report_id, context)
+    _remember(REPORT_TRANSCRIPTS, next_report_id, transcript)
+    return {
+        "spec_id": spec_id,
+        "report_id": next_report_id,
+        "report": context,
+    }
 
 
 # --------------------------------------------------------------------------

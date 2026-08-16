@@ -1,0 +1,13 @@
+.git
+.github
+.venv*
+.pytest_cache
+**/__pycache__
+**/*.pyc
+.env
+uploads
+tests
+docs
+*.md
+!THIRD_PARTY_NOTICES.md
+samples/*.whisper.json

@@ -304,6 +304,18 @@ pip install -r requirements.txt
 | `faster-whisper` | `transcribe` and browser video upload | `base.en` on CPU. First run downloads ~140 MB. |
 | `ffmpeg` on PATH | `transcribe` and browser video upload | Duration is written into the transcript at transcribe time, which is why the demo path needs no ffmpeg. |
 
+## Deploy
+
+The repository includes a production Docker image and a Render Blueprint. The
+image runs as an unprivileged user, includes ffmpeg for real media uploads, and
+exposes `/healthz` for deployment readiness checks. Render prompts for
+`GEMINI_API_KEY`; never commit the key or bake it into the image.
+
+Deploy the Blueprint from the repository, then point the root domain to
+Render's load balancer and `www` to the generated `onrender.com` hostname.
+The service is configured for `sponsorlint.xyz` and automatic deploys only
+after GitHub checks pass.
+
 ## Layout
 
 ```

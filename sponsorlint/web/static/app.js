@@ -1,6 +1,6 @@
 /* SponsorLint UI — one local-first workflow, no framework, no build step. */
 
-const SESSION_KEY = "sponsorlint-ui-v2";
+const SESSION_KEY = "sponsorlint-ui-v3";
 const STEP_ORDER = ["upload", "review", "processing", "report"];
 const STEP_HASH = { upload: "brief", review: "review", processing: "check", report: "report" };
 const HASH_STEP = { brief: "upload", review: "review", check: "processing", report: "report" };
@@ -11,6 +11,7 @@ const initialState = () => ({
   takes: [],
   specId: null,
   lastReport: null,
+  lastReportId: null,
   lastTake: "v1",
   current: "upload",
   maxStep: 0,
@@ -179,21 +180,28 @@ function runTyper() {
   if (reduced) return;
   const states = ["is-block", "is-inverse", "is-outline"];
   let frame = 0;
-  const frames = 13;
-  const timer = window.setInterval(() => {
+  let energy = 0;
+  let nextPulse = 0;
+  host.addEventListener("pointermove", () => { energy = 1; });
+  host.addEventListener("pointerleave", () => { energy = Math.max(energy, .35); });
+  const animate = () => {
+    const now = performance.now();
+    if (now >= nextPulse) {
+      frame = 0;
+      nextPulse = now + 2500 + Math.random() * 1700;
+    }
     characters.forEach((character, index) => {
       character.className = "typer-char";
-      const local = frame - index * 0.28;
-      if (local >= 0 && local < 4.5) {
+      const local = frame - index * (energy > .5 ? .12 : .28);
+      if (local >= 0 && local < 3.8 + energy * 2.4) {
         character.classList.add(states[(index + Math.floor(local)) % states.length]);
       }
     });
-    frame += 1;
-    if (frame > frames + characters.length * 0.28) {
-      window.clearInterval(timer);
-      characters.forEach((character) => (character.className = "typer-char"));
-    }
-  }, 52);
+    frame += .9 + energy * 1.8;
+    energy *= .92;
+    window.setTimeout(animate, 52);
+  };
+  animate();
 }
 
 function initGlyphField() {
@@ -204,6 +212,22 @@ function initGlyphField() {
   const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   let animationFrame = 0;
   let resizeTimer = 0;
+  let visible = true;
+  let pointerActive = false;
+  let pointerX = .5;
+  let pointerY = .5;
+
+  canvas.addEventListener("pointermove", (event) => {
+    const rect = canvas.getBoundingClientRect();
+    pointerX = Math.max(0, Math.min(1, (event.clientX - rect.left) / Math.max(1, rect.width)));
+    pointerY = Math.max(0, Math.min(1, (event.clientY - rect.top) / Math.max(1, rect.height)));
+    pointerActive = true;
+  });
+  canvas.addEventListener("pointerleave", () => { pointerActive = false; });
+  canvas.addEventListener("pointercancel", () => { pointerActive = false; });
+  new IntersectionObserver((entries) => {
+    visible = entries.some((entry) => entry.isIntersecting);
+  }, { rootMargin: "140px" }).observe(canvas);
 
   function seeded(index, offset = 0) {
     const value = Math.sin((index + 1) * 91.345 + offset * 17.17) * 43758.5453;
@@ -277,8 +301,13 @@ function initGlyphField() {
     }
 
     function draw(now) {
+      if (!visible || document.hidden) {
+        animationFrame = window.requestAnimationFrame(draw);
+        return;
+      }
       const elapsed = now - start;
       const progress = Math.min(1, elapsed / duration);
+      const seconds = elapsed / 1000;
       ctx.fillStyle = "#090a08";
       ctx.fillRect(0, 0, width, height);
       ctx.textAlign = "center";
@@ -286,24 +315,41 @@ function initGlyphField() {
 
       ctx.font = `500 ${mobile ? 8 : 9}px ${getComputedStyle(canvas).fontFamily || "monospace"}`;
       atmosphere.forEach((item, index) => {
-        const drift = reduced ? 0 : item.drift * Math.sin(progress * Math.PI + index);
+        const drift = reduced ? 0 : item.drift * Math.sin(seconds * .55 + index);
         ctx.fillStyle = "rgba(180,185,171,.105)";
-        ctx.fillText(item.glyph, item.x + drift, item.y);
+        const parallaxX = pointerActive ? (pointerX - .5) * (2 + index % 4) : Math.sin(seconds * .23 + index) * .7;
+        const parallaxY = pointerActive ? (pointerY - .5) * (2 + index % 3) : 0;
+        ctx.fillText(item.glyph, item.x + drift + parallaxX, item.y + parallaxY);
       });
 
       particles.forEach((particle, index) => {
         const local = ease((progress - particle.delay) / (1 - particle.delay));
         const spin = (1 - local) * Math.PI * 1.7;
-        const x = particle.sx + (particle.tx - particle.sx) * local + Math.cos(particle.angle + spin) * (1 - local) * 18;
-        const y = particle.sy + (particle.ty - particle.sy) * local + Math.sin(particle.angle + spin) * (1 - local) * 18;
-        const glyph = local < .78 ? glyphs[(index + Math.floor(progress * 30)) % glyphs.length] : particle.glyph;
+        let x = particle.sx + (particle.tx - particle.sx) * local + Math.cos(particle.angle + spin) * (1 - local) * 18;
+        let y = particle.sy + (particle.ty - particle.sy) * local + Math.sin(particle.angle + spin) * (1 - local) * 18;
+        if (progress >= 1 && !reduced) {
+          x += Math.sin(seconds * .9 + index * .31) * 1.25;
+          y += Math.cos(seconds * .72 + index * .27) * .85;
+          if (pointerActive) {
+            const cursorX = pointerX * width;
+            const cursorY = pointerY * height;
+            const deltaX = x - cursorX;
+            const deltaY = y - cursorY;
+            const distance = Math.max(1, Math.hypot(deltaX, deltaY));
+            const influence = Math.max(0, 1 - distance / 105);
+            x += (deltaX / distance) * influence * 16;
+            y += (deltaY / distance) * influence * 16;
+          }
+        }
+        const flicker = progress >= 1 && Math.sin(seconds * 2.3 + index * 8.1) > .996;
+        const glyph = local < .78 || flicker ? glyphs[(index + Math.floor(seconds * 14)) % glyphs.length] : particle.glyph;
         const alpha = .18 + local * .76;
 
-        if (!reduced && local > .25 && local < .88) {
+        if (!reduced && (local > .25 && local < .88 || pointerActive && progress >= 1)) {
           ctx.fillStyle = `rgba(255,92,76,${alpha * .13})`;
-          ctx.fillText(glyph, x - 1.4, y);
+          ctx.fillText(glyph, x - (pointerActive ? 2.2 : 1.4), y);
           ctx.fillStyle = `rgba(87,205,255,${alpha * .10})`;
-          ctx.fillText(glyph, x + 1.4, y);
+          ctx.fillText(glyph, x + (pointerActive ? 2.2 : 1.4), y);
         }
         ctx.fillStyle = `rgba(224,232,211,${alpha})`;
         ctx.fillText(glyph, x, y);
@@ -317,7 +363,7 @@ function initGlyphField() {
       ctx.fillRect(0, 0, 10, height);
       ctx.fillRect(width - 10, 0, 10, height);
 
-      if (progress < 1) animationFrame = window.requestAnimationFrame(draw);
+      if (!reduced || progress < 1) animationFrame = window.requestAnimationFrame(draw);
     }
 
     animationFrame = window.requestAnimationFrame(draw);
@@ -362,7 +408,10 @@ function openCustomBrief() {
   window.setTimeout(() => $("mode-upload").focus(), 350);
 }
 
+let activeBriefMode = "upload";
+
 function setBriefMode(mode) {
+  activeBriefMode = mode;
   const upload = mode === "upload";
   $("mode-upload").setAttribute("aria-selected", String(upload));
   $("mode-paste").setAttribute("aria-selected", String(!upload));
@@ -383,6 +432,7 @@ $("load-sample").addEventListener("click", async () => {
     state.takes = data.takes;
     state.specId = null;
     state.lastReport = null;
+    state.lastReportId = null;
     state.lastTake = "v1";
     state.maxStep = 1;
     $("brief-display").textContent = state.briefText;
@@ -402,8 +452,8 @@ $("mode-paste").addEventListener("click", () => setBriefMode("paste"));
 
 $("compile").addEventListener("click", async () => {
   clearError();
-  const file = $("brief-file").files[0];
-  const text = $("brief-text").value.trim();
+  const file = activeBriefMode === "upload" ? $("brief-file").files[0] : null;
+  const text = activeBriefMode === "paste" ? $("brief-text").value.trim() : "";
   if (!file && !text) {
     fail("Add a brief first. Choose a file or paste the sponsor requirements.");
     return;
@@ -422,6 +472,7 @@ $("compile").addEventListener("click", async () => {
     state.takes = [];
     state.specId = null;
     state.lastReport = null;
+    state.lastReportId = null;
     state.lastTake = "";
     state.maxStep = 1;
     $("brief-display").textContent = state.briefText;
@@ -480,6 +531,7 @@ function ruleDisplayValue(rule) {
 function markSpecDirty() {
   state.specId = null;
   state.lastReport = null;
+  state.lastReportId = null;
   state.maxStep = Math.min(state.maxStep, 1);
   $("approval-status").textContent = "Changes need approval";
   updateWorkflow();
@@ -646,19 +698,47 @@ function renderReview() {
     row.appendChild(copy);
     const confirmation = el("label", "manual-confirm");
     const checkbox = document.createElement("input");
+    const confirmationText = document.createTextNode(item.confirmed ? "Confirmed" : "Confirm manually");
     checkbox.type = "checkbox";
     checkbox.checked = Boolean(item.confirmed);
     checkbox.addEventListener("change", () => {
       state.spec.manual_review[index].confirmed = checkbox.checked;
+      confirmationText.textContent = checkbox.checked ? "Confirmed" : "Confirm manually";
       markSpecDirty();
       renderReviewCounts();
     });
     confirmation.appendChild(checkbox);
-    confirmation.appendChild(document.createTextNode(item.confirmed ? "Confirmed" : "Confirm manually"));
+    confirmation.appendChild(confirmationText);
     row.appendChild(confirmation);
     manualHost.appendChild(row);
   });
   renderReviewCounts();
+}
+
+function clearRuleErrors() {
+  document.querySelectorAll(".rule-card.is-invalid").forEach((card) => card.classList.remove("is-invalid"));
+}
+
+function markRuleErrors(message) {
+  clearRuleErrors();
+  const indices = [...String(message).matchAll(/rules\s*->\s*(\d+)/gi)].map((match) => Number(match[1]));
+  const ids = [...String(message).matchAll(/\b(r\d+)\s*:/gi)].map((match) => match[1].toLowerCase());
+  const cards = [];
+  indices.forEach((index) => {
+    const card = document.querySelectorAll(".rule-card")[index];
+    if (card) cards.push(card);
+  });
+  ids.forEach((id) => {
+    const card = document.querySelector(`[data-rule-id="${CSS.escape(id)}"]`);
+    if (card) cards.push(card);
+  });
+  [...new Set(cards)].forEach((card) => {
+    card.classList.add("is-invalid");
+    const details = card.querySelector("details");
+    if (details) details.open = true;
+  });
+  if (cards[0]) cards[0].scrollIntoView({ behavior: "smooth", block: "center" });
+  return cards.length;
 }
 
 function renderReviewCounts() {
@@ -690,6 +770,7 @@ $("add-rule").addEventListener("click", () => {
 
 $("approve").addEventListener("click", async () => {
   clearError();
+  clearRuleErrors();
   const button = $("approve");
   button.disabled = true;
   button.textContent = "Approving specification…";
@@ -706,7 +787,8 @@ $("approve").addEventListener("click", async () => {
     renderTakes();
     show("processing");
   } catch (error) {
-    fail(`${error.message}\nReview the highlighted requirement and try approval again.`);
+    const marked = markRuleErrors(error.message);
+    fail(`${error.message}\n${marked ? "Review the highlighted requirement" : "Review the approval set"} and try again.`);
   } finally {
     button.disabled = false;
     renderReviewCounts();
@@ -840,6 +922,7 @@ $("run-check").addEventListener("click", async () => {
     ]);
     state.lastTake = video ? "upload" : take;
     state.lastReport = data.report;
+    state.lastReportId = data.report_id;
     state.maxStep = 3;
     renderReport(data.report);
     show("report");
@@ -993,21 +1076,22 @@ function manualReportCard(item, index) {
 async function confirmManualFromReport(index, button) {
   clearError();
   if (!state.spec?.manual_review?.[index]) return;
+  if (!state.lastReportId) {
+    fail("This report is no longer attached to a saved verification run. Check the cut again before confirming the visual item.");
+    return;
+  }
   const previous = Boolean(state.spec.manual_review[index].confirmed);
   state.spec.manual_review[index].confirmed = true;
   button.disabled = true;
   button.textContent = "Confirming and rechecking…";
   try {
-    const approval = await call("/api/spec/approve", {
+    const data = await call(`/api/report/${encodeURIComponent(state.lastReportId)}/confirm-manual`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ spec: state.spec }),
+      body: JSON.stringify({ spec: state.spec, index }),
     });
-    state.specId = approval.spec_id;
-    const form = new FormData();
-    form.append("spec_id", state.specId);
-    form.append("take", state.lastTake);
-    const data = await call("/api/verify", { method: "POST", body: form });
+    state.specId = data.spec_id;
+    state.lastReportId = data.report_id;
     state.lastReport = data.report;
     renderReport(data.report);
     persistState();

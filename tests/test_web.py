@@ -7,7 +7,7 @@ import httpx
 import pytest
 from fastapi import HTTPException
 
-from sponsorlint.web.app import REPORTS, SPECS, app
+from sponsorlint.web.app import REPORTS, REPORT_TRANSCRIPTS, SPECS, app
 
 web_app = importlib.import_module("sponsorlint.web.app")
 
@@ -29,6 +29,7 @@ class MemoryUpload:
 async def _sample_campaign_scenario():
     SPECS.clear()
     REPORTS.clear()
+    REPORT_TRANSCRIPTS.clear()
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
         page = await client.get("/")
@@ -59,6 +60,14 @@ async def _sample_campaign_scenario():
         assert stored.status_code == 200
         assert stored.json() == corrected_body["report"]
 
+        confirmed = await client.post(
+            f"/api/report/{corrected_body['report_id']}/confirm-manual",
+            json={"spec": campaign["spec"], "index": 0},
+        )
+        assert confirmed.status_code == 200
+        assert confirmed.json()["report"]["status"] == "SPONSOR_READY"
+        assert confirmed.json()["report"]["score"] == "7/7"
+
 
 def test_sample_campaign_keeps_unresolved_visual_item_in_review():
     asyncio.run(_sample_campaign_scenario())
@@ -67,6 +76,7 @@ def test_sample_campaign_keeps_unresolved_visual_item_in_review():
 async def _unconfirmed_manual_scenario():
     SPECS.clear()
     REPORTS.clear()
+    REPORT_TRANSCRIPTS.clear()
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
         sample = (await client.get("/api/sample")).json()
@@ -103,6 +113,42 @@ async def _cross_origin_scenario():
 
 def test_cross_origin_write_is_rejected():
     asyncio.run(_cross_origin_scenario())
+
+
+async def _deployment_and_manual_confirmation_errors_scenario():
+    SPECS.clear()
+    REPORTS.clear()
+    REPORT_TRANSCRIPTS.clear()
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        health = await client.get("/healthz")
+        assert health.status_code == 200
+        assert health.json() == {"status": "ok"}
+
+        missing = await client.post(
+            "/api/report/missing/confirm-manual",
+            json={"spec": {}, "index": 0},
+        )
+        assert missing.status_code == 404
+
+        sample = (await client.get("/api/sample")).json()
+        approval = await client.post("/api/spec/approve", json={"spec": sample["spec"]})
+        verified = await client.post(
+            "/api/verify",
+            data={"spec_id": approval.json()["spec_id"], "take": "v3"},
+        )
+        report_id = verified.json()["report_id"]
+
+        invalid_index = await client.post(
+            f"/api/report/{report_id}/confirm-manual",
+            json={"spec": sample["spec"], "index": 99},
+        )
+        assert invalid_index.status_code == 400
+        assert invalid_index.json()["detail"] == "That manual-review item does not exist."
+
+
+def test_deployment_probe_and_manual_confirmation_errors_are_explicit():
+    asyncio.run(_deployment_and_manual_confirmation_errors_scenario())
 
 
 def test_upload_is_streamed_with_a_hard_limit_and_cleaned_up(tmp_path, monkeypatch):

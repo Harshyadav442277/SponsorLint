@@ -95,10 +95,9 @@ $("compile").addEventListener("click", async () => {
     const data = await call("/api/compile", { method: "POST", body: form });
     state.briefText = data.brief_text;
     state.spec = data.spec;
-    if (!state.takes.length) {
-      const sample = await call("/api/sample").catch(() => ({ takes: [] }));
-      state.takes = sample.takes || [];
-    }
+    // Committed takes belong only to the committed Aegis sample campaign.
+    // A custom brief must be checked against the user's own upload.
+    state.takes = [];
     enterReview();
   } catch (err) {
     fail(err.message);

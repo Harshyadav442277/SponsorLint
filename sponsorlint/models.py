@@ -9,7 +9,14 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    FiniteFloat,
+    field_validator,
+    model_validator,
+)
 
 # --------------------------------------------------------------------------
 # Vocabularies
@@ -82,10 +89,17 @@ class Rule(BaseModel):
 
     expected: str | None = None  # EXACT_VALUE, URL_OR_CTA
     phrases: list[str] | None = None  # MUST_SAY, MUST_NOT_SAY
-    min_seconds: float | None = None  # DURATION
-    max_seconds: float | None = None  # DURATION
-    within_first_seconds: float | None = None  # MUST_DISCLOSE placement
-    within_last_seconds: float | None = None  # URL_OR_CTA closing placement
+    min_seconds: FiniteFloat | None = None  # DURATION
+    max_seconds: FiniteFloat | None = None  # DURATION
+    within_first_seconds: FiniteFloat | None = None  # MUST_DISCLOSE placement
+    within_last_seconds: FiniteFloat | None = None  # URL_OR_CTA closing placement
+
+    @field_validator("id", "label")
+    @classmethod
+    def _identity_required(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("rule id and label cannot be empty")
+        return v.strip()
 
     @field_validator("source_quote")
     @classmethod
@@ -109,15 +123,32 @@ class Rule(BaseModel):
     def _check_payload(self) -> "Rule":
         t = self.type
 
+        allowed_payloads = {
+            "MUST_SAY": {"phrases"},
+            "MUST_NOT_SAY": {"phrases"},
+            "EXACT_VALUE": {"expected"},
+            "MUST_DISCLOSE": {"within_first_seconds"},
+            "DURATION": {"min_seconds", "max_seconds"},
+            "URL_OR_CTA": {"expected", "within_last_seconds"},
+        }
+        payload = {
+            "expected": self.expected,
+            "phrases": self.phrases,
+            "min_seconds": self.min_seconds,
+            "max_seconds": self.max_seconds,
+            "within_first_seconds": self.within_first_seconds,
+            "within_last_seconds": self.within_last_seconds,
+        }
+        wrong = sorted(
+            name for name, value in payload.items()
+            if value is not None and name not in allowed_payloads[t]
+        )
+        if wrong:
+            raise ValueError(f"{t} does not accept: {', '.join(wrong)}")
+
         if t in ("MUST_SAY", "MUST_NOT_SAY"):
-            # A compiler that put the phrase in `expected` gets migrated rather
-            # than rejected — same data, wrong field. Never a guess.
-            if not self.phrases and self.expected:
-                object.__setattr__(self, "phrases", [self.expected])
-                object.__setattr__(self, "expected", None)
             if not self.phrases:
                 raise ValueError(f"{t} requires at least one entry in `phrases`")
-            object.__setattr__(self, "expected", None)
 
         elif t in ("EXACT_VALUE", "URL_OR_CTA"):
             if not self.expected or not self.expected.strip():
@@ -130,6 +161,10 @@ class Rule(BaseModel):
         elif t == "DURATION":
             if self.min_seconds is None and self.max_seconds is None:
                 raise ValueError("DURATION requires `min_seconds` or `max_seconds`")
+            if self.min_seconds is not None and self.min_seconds < 0:
+                raise ValueError("DURATION `min_seconds` cannot be negative")
+            if self.max_seconds is not None and self.max_seconds <= 0:
+                raise ValueError("DURATION `max_seconds` must be positive")
             if (
                 self.min_seconds is not None
                 and self.max_seconds is not None
@@ -142,9 +177,6 @@ class Rule(BaseModel):
             # state placement at all (Architecture.md §5.4).
             if self.within_first_seconds is not None and self.within_first_seconds <= 0:
                 raise ValueError("`within_first_seconds` must be positive")
-
-        if self.within_last_seconds is not None and t != "URL_OR_CTA":
-            raise ValueError("`within_last_seconds` is only valid for URL_OR_CTA")
 
         return self
 
@@ -163,6 +195,13 @@ class ManualReviewItem(BaseModel):
     def _manual_quote_required(cls, v: str) -> str:
         if not v or not v.strip():
             raise ValueError("source_quote is mandatory for manual-review items")
+        return v.strip()
+
+    @field_validator("reason")
+    @classmethod
+    def _manual_reason_required(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("manual-review reason cannot be empty")
         return v.strip()
 
 
@@ -225,11 +264,24 @@ class Spec(BaseModel):
 
 
 class Segment(BaseModel):
-    model_config = ConfigDict(extra="ignore")
+    model_config = ConfigDict(extra="forbid")
 
-    start: float
-    end: float
+    start: FiniteFloat = Field(ge=0)
+    end: FiniteFloat = Field(ge=0)
     text: str
+
+    @field_validator("text")
+    @classmethod
+    def _text_required(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("segment text cannot be empty")
+        return v.strip()
+
+    @model_validator(mode="after")
+    def _ordered_times(self) -> "Segment":
+        if self.end < self.start:
+            raise ValueError("segment end cannot precede its start")
+        return self
 
 
 class Transcript(BaseModel):
@@ -240,11 +292,22 @@ class Transcript(BaseModel):
     what keeps the demo path free of an ffmpeg dependency (Architecture.md §4.3).
     """
 
-    model_config = ConfigDict(extra="ignore")
+    model_config = ConfigDict(extra="forbid")
 
-    duration_seconds: float
+    duration_seconds: FiniteFloat = Field(gt=0)
     segments: list[Segment] = Field(default_factory=list)
     source: str | None = None
+
+    @model_validator(mode="after")
+    def _valid_timeline(self) -> "Transcript":
+        previous_start = -1.0
+        for segment in self.segments:
+            if segment.start < previous_start:
+                raise ValueError("segments must be ordered by start time")
+            if segment.end > self.duration_seconds:
+                raise ValueError("segment extends past transcript duration")
+            previous_start = segment.start
+        return self
 
     def full_text(self) -> str:
         return " ".join(s.text.strip() for s in self.segments if s.text.strip())

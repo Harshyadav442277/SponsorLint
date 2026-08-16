@@ -20,8 +20,8 @@ actual recorded integration with timestamped evidence.
 ❌ PROHIBITED CLAIM     Detected: "completely anonymous"              00:31
    "It keeps you completely anonymous online."
 
-✓  MANUAL CONFIRMED     "Product interface visible for at least five seconds."
-                        Confirmed by the creator during spec review.
+□  MANUAL REVIEW        "Product interface visible for at least five seconds."
+                        Not confirmed: the current video shows only a static logo.
 
 4/7 requirements passed                                        DO NOT SEND
 ```
@@ -74,8 +74,12 @@ python -m sponsorlint demo --arc
 
 ```
 V1   4/7 requirements passed      DO NOT SEND
-V3   7/7 requirements passed      SPONSOR READY
+V3   7/7 requirements passed      REVIEW
 ```
+
+V3 passes every automated audio and duration check. Its overall state remains `REVIEW` because the
+real video does not show the required product interface, and SponsorLint deliberately leaves visual
+verification to a human.
 
 Or use the browser — same zero-key path, no terminal required:
 
@@ -129,7 +133,7 @@ assertions the unit tests use — written once, used twice.
 
 ```bash
 python -m sponsorlint eval --verbose   # every case, pass or miss
-python -m pytest tests -q              # 201 passed, 1 intentional xfail
+python -m pytest tests -q              # 202 passed, 1 intentional xfail
 ```
 
 ---
@@ -182,8 +186,8 @@ that read is a specification you can argue with before anything is checked.
 
 The review screen shows the source sentence beside every extracted rule. You can edit, add and
 delete rules, and the **approved** spec is what enters the verifier. Changing the expected discount
-from `73%` to `70%` really does flip the corrected take from `SPONSOR READY 7/7` to
-`DO NOT SEND 6/7`. That is [a test](tests/test_engine.py), not a claim.
+from `73%` to `70%` really does flip the corrected take from `REVIEW 7/7` to `DO NOT SEND 6/7`.
+That is [a test](tests/test_engine.py), not a claim.
 
 ### Rule types
 
@@ -250,10 +254,9 @@ Written by us, not discovered by you.
   not give a disclosure deadline, SponsorLint will not invent one — it asks *you* for the number on
   the review screen and reports the timestamp.
 - **It does not guarantee sponsor approval** and does not replace brand review.
-- **The committed transcripts are authored fixtures, not yet Whisper output.** They match the
-  recording script line for line, which is enough for every validator, the eval and the demo to run
-  for real. Once the takes are recorded, `python -m sponsorlint transcribe` regenerates them and
-  nothing else changes — the verdict is computed from whatever the transcript says. See
+- **The committed transcripts remain authored fixtures.** The real V1 and V3 media have also been
+  run through `faster-whisper` as candidate transcripts without manual cleanup. Those runs prove the
+  audio/ASR/verifier path; candidates are not promoted automatically. See
   [`samples/README.md`](samples/README.md).
 - **Local, in-memory session store.** No database, accounts, or per-user isolation. Specs and reports
   use unguessable IDs and the oldest entries are evicted, but this server should not be exposed to
@@ -267,7 +270,7 @@ Written by us, not discovered by you.
 
 ```bash
 python -m sponsorlint demo                       # zero-key demo, committed campaign
-python -m sponsorlint demo --arc                 # DO NOT SEND → SPONSOR READY
+python -m sponsorlint demo --arc                 # DO NOT SEND → REVIEW
 python -m sponsorlint eval                       # validator metrics
 python -m sponsorlint verify --spec S --transcript T
 python -m sponsorlint serve                      # the web UI

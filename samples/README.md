@@ -9,26 +9,27 @@ The committed demo campaign. These files are what `python -m sponsorlint demo` r
 | `script.md` | The recording script, with the three planted errors marked. |
 | `spec.approved.json` | The seven-rule specification **after user review**. Hand-written, per `Phases.md` Phase 1. |
 | `transcript.v1.json` | Transcript of the take with the planted errors. → `DO NOT SEND` |
-| `transcript.v3.json` | Transcript of the corrected take. → `SPONSOR READY` |
+| `transcript.v3.json` | Transcript of the corrected take. → `REVIEW` while the visual item is unresolved |
 
 ## Status of the transcript fixtures
 
-> **The two transcript files are authored fixtures, not yet Whisper output.**
+> **The two committed transcript files are authored fixtures, not raw Whisper output.**
 > They match `script.md` line for line and carry realistic segment boundaries and
 > timings, which is enough for every validator, the eval harness and the demo to
 > run for real.
 >
-> Once `sponsor-cut-v1.mp4` and `sponsor-cut-v3.mp4` are recorded, regenerate both:
+> Real V1 and V3 media have been transcribed to uncommitted candidate files. To regenerate them:
 >
 > ```bash
-> python -m sponsorlint transcribe samples/sponsor-cut-v1.mp4 -o samples/transcript.v1.whisper.json
-> python -m sponsorlint transcribe samples/sponsor-cut-v3.mp4 -o samples/transcript.v3.whisper.json
+> python -m sponsorlint transcribe ~/Desktop/AegisV1.mp4 -o samples/transcript.v1.whisper.json
+> python -m sponsorlint transcribe ~/Desktop/AegisV3.mp4 -o samples/transcript.v3.whisper.json
 > python -m sponsorlint verify --spec samples/spec.approved.json --transcript samples/transcript.v1.whisper.json
 > python -m sponsorlint verify --spec samples/spec.approved.json --transcript samples/transcript.v3.whisper.json
 > ```
 >
 > The first verification is expected to exit 1 with `4/7 DO NOT SEND`; the second
-> should exit 0 with `7/7 SPONSOR READY`. Inspect both candidate transcripts and
+> should exit 0 with `7/7 REVIEW` because all automated checks pass while the visual
+> item remains unresolved. Inspect both candidate transcripts and
 > confirm all six critical strings from `script.md` are recognizable before replacing
 > the committed `transcript.v1.json` and `transcript.v3.json` fixtures.
 >
@@ -40,5 +41,6 @@ The committed demo campaign. These files are what `python -m sponsorlint demo` r
 (`Architecture.md` §5.4).
 
 `within_last_seconds: 15` makes the closing CTA a distinct placement check. The approved sample
-also records `confirmed: true` for the five-second interface requirement; that is a human assertion,
-not a claim that the audio verifier checked the screen. Clear it to see V3 resolve to `REVIEW`.
+records `confirmed: false` for the five-second interface requirement because the real V3 media shows
+only a static logo, not the required product interface. The automated score is still `7/7`, but the
+honest overall readiness state is `REVIEW`.

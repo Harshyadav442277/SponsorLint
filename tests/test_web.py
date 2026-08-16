@@ -52,7 +52,7 @@ async def _sample_campaign_scenario():
         corrected = await client.post("/api/verify", data={"spec_id": spec_id, "take": "v3"})
         assert corrected.status_code == 200
         corrected_body = corrected.json()
-        assert corrected_body["report"]["status"] == "SPONSOR_READY"
+        assert corrected_body["report"]["status"] == "REVIEW"
         assert corrected_body["report"]["score"] == "7/7"
 
         stored = await client.get(f"/api/report/{corrected_body['report_id']}")
@@ -60,7 +60,7 @@ async def _sample_campaign_scenario():
         assert stored.json() == corrected_body["report"]
 
 
-def test_sample_campaign_reaches_both_canonical_verdicts():
+def test_sample_campaign_keeps_unresolved_visual_item_in_review():
     asyncio.run(_sample_campaign_scenario())
 
 

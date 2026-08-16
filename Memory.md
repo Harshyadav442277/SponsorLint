@@ -29,25 +29,26 @@ This file exists so a fresh agent — new chat, new tool, new context window —
 ## Current state
 
 ```
-Phase:            Core hardening complete; ready for final independent review.
-Last gate passed: 201 passed + 1 intentional xfail; 46-fixture eval at 97.8%
-Clock:            built and hardened across six sessions, Aug 16 2026
-Submittable:      REVIEW-READY — real-media/API proof gates open; not submission-frozen
+Phase:            Core hardening complete; real audio pipeline proven; visual item unresolved.
+Last gate passed: 202 passed + 1 intentional xfail; 46-fixture eval at 97.8%
+Clock:            built and hardened through Aug 17 2026
+Submittable:      REVIEW-READY — live API and manual visual proof gates open; not submission-frozen
 ```
 
 **What works, verified by running it:**
 
-- `python -m sponsorlint demo` → `3 FAIL · 0 WARN · 4 PASS · 1 MANUAL CONFIRMED` → `4/7` → `DO NOT SEND`
-- `python -m sponsorlint demo --arc` → `V1 4/7 DO NOT SEND` → `V3 7/7 SPONSOR READY`
+- `python -m sponsorlint demo` → `3 FAIL · 0 WARN · 4 PASS · 1 MANUAL PENDING` → `4/7` → `DO NOT SEND`
+- `python -m sponsorlint demo --arc` → `V1 4/7 DO NOT SEND` → `V3 7/7 REVIEW`
 - `python -m sponsorlint eval` → 46 fixtures, 45 correct, **97.8%**, 0 False PASSes, 1 False FAIL
-- `python -m pytest tests -q` → **201 passed, 1 xfailed** in 0.92s (fresh lightweight CI-equivalent venv)
+- `python -m pytest tests -q` → **202 passed, 1 xfailed**
 - `python -m sponsorlint serve` → full four-screen flow drives end to end in a browser
 - All six validators, the engine, normalization, the eval harness, the terminal report
-- `compile` / `transcribe` are written but **not exercised live** (no key, no video)
+- `transcribe` has been exercised on real V1 and V3 MP4s with raw `faster-whisper` output; the
+  audio/ASR/verifier path is proven. `compile` still needs one live API call
 - Compiler citations are whitespace-normalized and grounded against literal brief text; invented
   rule or manual-item quotes are retried once, then rejected
 - Manual items require explicit confirmation; unresolved items and validator exceptions produce
-  `REVIEW`, while the confirmed sample can still reach `SPONSOR READY`
+  `REVIEW`. The current sample is intentionally unresolved because the video shows only a static logo
 - Closing CTA uses `within_last_seconds: 15`; negated disclosures and fuzzy prefix/near-word false
   passes have adversarial regression coverage
 - Non-finite/impossible transcript timelines and wrong per-type rule fields are rejected at the
@@ -69,9 +70,8 @@ Submittable:      REVIEW-READY — real-media/API proof gates open; not submissi
 - Missing-key and missing-video failures are readable CLI errors with exit code 2, not tracebacks
 - The earlier `.venv-judge` no-ffmpeg reproduction remains historical evidence; its Python 3.12 base was removed from this machine, so its launcher is now stale
 
-**Next action:** reauthenticate GitHub CLI as a repository owner and update the stale repository
-description/topics. Then record the MP4s using the safe candidate-transcript workflow in
-`samples/README.md`.
+**Next action:** run one live compiler call. If the visual gate is ever closed, replace the static
+logo media with a genuine product-interface view before setting the manual item to confirmed.
 
 ---
 
@@ -80,16 +80,16 @@ description/topics. Then record the MP4s using the safe candidate-transcript wor
 | Phase | Gate | Status |
 |---|---|---|
 | — | Repo exists, demo deps install clean | ☑ |
-| 0 | Brief + V1 exist; Whisper hears the planted errors | ☐ **brief/script/PDF exist; V1 not recorded** |
+| 0 | Brief + V1 exist; Whisper hears the planted errors | ☑ real V1 transcribed; all three planted errors recognized |
 | 1 | One command → one real verdict from cached transcript | ☑ |
 | 2 | All six validators produce verdicts on V1 | ☑ |
 | 3 | `eval` prints real metrics, no hardcoded score | ☑ 97.8% |
 | **4** | **Fresh clone → `demo` → real output, no key** ← **SUBMITTABLE** | ☑ verified in `.venv-judge` |
 | 5 | Prose brief → correct spec, `min_seconds: 60` extracted | ☐ **code complete, no live API call made** |
 | 6 | Editing `73%` → `70%` flips the real verdict | ☑ verified in the browser and in `tests/test_engine.py` |
-| 7 | Fresh MP4 → real report, no manual file editing | ☐ **code complete, no video to try** |
+| 7 | Fresh MP4 → real report, no manual file editing | ◐ audio/ASR/verifier passed; required visual remains manual and unresolved |
 | 8 | Judge understands the report without a terminal | ☑ |
-| 9 | `DO NOT SEND → SPONSOR READY` arc runs clean twice | ☑ on fixtures; re-verify after recording |
+| 9 | `DO NOT SEND → REVIEW` honest current arc | ☑ V1 4/7; V3 7/7 automated with visual unresolved |
 | 10 | README complete with real eval numbers | ☑ |
 | — | Clean clone, fresh venv, everything runs | ☑ |
 
@@ -114,7 +114,7 @@ Mirrors `PRD.md` §6. Check off only when actually verified, not when believed.
 ☑ 12  Unverifiable requirements → MANUAL REVIEW → explicit human confirmation
 ☑ 13  User can edit / add / delete rules
 ☑ 14  Edited spec changes the real verdict     (browser + test_engine.py)
-☐ 15  Fresh MP4 transcribed and verified       — needs the recording
+☐ 15  Fresh MP4 transcribed and verified       — audio path passed; formal visual gate unresolved
 ☑ 16  eval reports actual metrics
 ☑ 17  demo works with no credentials, no download, no ffmpeg
 ☑ 18  Every failure shows expected/detected/timestamp/evidence/source
@@ -122,7 +122,8 @@ Mirrors `PRD.md` §6. Check off only when actually verified, not when believed.
 ☑ 20  No hardcoded verdicts anywhere
 ```
 
-18 of 20 pass. The two open ones both need an artifact only the creator can produce (an API key, a recording) — no code is missing for either.
+18 of 20 pass. The two open ones need external evidence: one live compiler call and a real visual
+interface confirmation. No verifier code is missing for either.
 
 ---
 
@@ -134,7 +135,7 @@ Pinned so nobody has to re-derive them.
 |---|---|
 | Fictional brand | `Aegis VPN` · `aegisvpn.com/alex` · `Shield Mode` · `73%` · `HARSH20` |
 | Planted errors in V1 | "seventy percent" (0:43) · no "Shield Mode" · "completely anonymous" (0:31) |
-| Expected V1 verdict | 3 FAIL · 0 WARN · 4 PASS · 1 MANUAL CONFIRMED → `4/7` → `DO NOT SEND` |
+| Expected V1 verdict | 3 FAIL · 0 WARN · 4 PASS · 1 MANUAL PENDING → `4/7` → `DO NOT SEND` |
 | Transcript fixture | `samples/transcript.v1.json` — **cached, never re-run Whisper in dev** |
 | Whisper config | `faster-whisper`, `base.en`, **CPU only, no GPU path** |
 | Fuzzy scorer | `rapidfuzz.fuzz.partial_ratio` >= 90 over whole-token windows; required mentions repair adjacent transpositions only |
@@ -159,6 +160,14 @@ Pinned so nobody has to re-derive them.
 ## Session log
 
 *Newest first. One block per working session.*
+
+### Session 8 — real-media audio proof, honest visual status · Aug 17, 2026
+
+- Ran the real V1 and V3 MP4s through `faster-whisper` without transcript cleanup, then verified
+  the raw candidates: V1 produced `4/7 DO NOT SEND`; V3 passed all seven automated checks
+- Inspected the real media and found only a static Aegis logo, not the required product interface
+- Left the manual visual item unconfirmed, making the honest V3 readiness state `7/7 REVIEW`
+- Kept the raw Whisper candidates separate from the committed authored fixtures
 
 ### Session 7 — final pre-media freeze pass · Aug 16, 2026
 
@@ -375,8 +384,8 @@ Cut order from `Rules.md` §9: demo video → jump-to-timestamp → UI polish �
 ## Handoff note
 
 > The hardened core and zero-key path are verified in a fresh lightweight venv, and the project is
-> ready for final independent review but is not submission-frozen. The open empirical gates are the
-> recordings and one live compiler call: write the takes from
-> `samples/script.md`, check GATE 2:00 (all six critical strings, both columns) *before*
-> committing to the take, then regenerate both transcripts with `transcribe`. Read
-> **Deviations D-1** first — the committed transcripts are authored fixtures, and the README says so.
+> ready for final independent review but is not submission-frozen. The real V1/V3 audio,
+> transcription, and verifier path is proven. V3 passes all seven automated checks but remains
+> `REVIEW` because its visual requirement is genuinely unresolved. The remaining empirical work is
+> one live compiler call; only claim `SPONSOR READY` after real interface footage is manually
+> confirmed. The committed transcripts remain authored fixtures; raw Whisper outputs are candidates.

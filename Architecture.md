@@ -509,8 +509,9 @@ all error-severity rules pass and no
 explicitly confirm an external check; until then, SponsorLint says `REVIEW` rather than claiming
 automation verified something it cannot observe.
 
-All seven demo rules are `severity: error`. The committed approved sample records the visual item
-as manually confirmed, so V1 is `DO NOT SEND` and V3 is `SPONSOR READY`.
+All seven demo rules are `severity: error`. The committed approved sample leaves the visual item
+unconfirmed because the real V3 media does not show the required product interface, so V1 is
+`DO NOT SEND` and V3 is `REVIEW` despite passing all seven automated checks.
 
 ### On the score
 
@@ -522,7 +523,7 @@ and nothing else. No rule weighting is implemented.
 ```
 V1   4/7 requirements passed      DO NOT SEND
 V2   6/7 requirements passed      DO NOT SEND
-V3   7/7 requirements passed      SPONSOR READY
+V3   7/7 requirements passed      REVIEW
 ```
 
 The binary state is what matters. The score is decoration.

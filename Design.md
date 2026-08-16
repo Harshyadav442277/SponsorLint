@@ -149,7 +149,7 @@ The largest element on the report. Three states, each with icon + word + color.
 ```
 ┌─────────────────────────────────────────────────────────┐
 │  ✕   DO NOT SEND                                        │   fail
-│      3 failed · 4 passed · 1 manual confirmed           │
+│      3 failed · 4 passed · 1 manual pending             │
 └─────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────┐
@@ -335,7 +335,7 @@ SponsorLint — samples/sponsor-cut-v1.mp4
         "The product interface should be visible for five seconds."
 
   ────────────────────────────────────────────────────────────
-  3 failed · 4 passed · 1 manual confirmed
+  3 failed · 4 passed · 1 manual pending
 
   DO NOT SEND
 ```
@@ -396,7 +396,7 @@ Add at least one rule, or re-compile the brief.
 The single most-viewed visual artifact in the project.
 
 - Terminal, dark theme, ~6 seconds, no narration, no cursor wiggling
-- Shows: `python -m sponsorlint demo` → findings scroll → `4/7 · DO NOT SEND` → the corrected run → `7/7 · SPONSOR READY`
+- Shows: `python -m sponsorlint demo` → findings scroll → `4/7 · DO NOT SEND` → the corrected run → `7/7 · REVIEW`, with the visual item explicitly unresolved
 - Use the **raw fraction**, not a percentage. Report the counts the run actually produces
 - Font ≥ 16px in the recording — it will be viewed at half size on GitHub
 - Trim every idle frame. The whole point is the verdict flipping

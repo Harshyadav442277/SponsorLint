@@ -155,19 +155,20 @@ def test_v1_produces_the_canonical_verdict():
     report = run(spec, Transcript.model_validate(load("transcript.v1.json")))
 
     assert (report.summary.fail, report.summary.warn,
-            report.summary.passed, report.summary.manual_review) == (3, 0, 4, 0)
-    assert report.summary.manual_confirmed == 1
+            report.summary.passed, report.summary.manual_review) == (3, 0, 4, 1)
+    assert report.summary.manual_confirmed == 0
     assert report.score.fraction == "4/7"
     assert report.status == "DO_NOT_SEND"
 
 
-def test_v3_reaches_sponsor_ready():
+def test_v3_stays_in_review_while_visual_item_is_unresolved():
     spec = Spec.model_validate(load("spec.approved.json"))
     report = run(spec, Transcript.model_validate(load("transcript.v3.json")))
 
     assert report.score.fraction == "7/7"
     assert report.summary.fail == 0
-    assert report.status == "SPONSOR_READY"
+    assert report.summary.manual_review == 1
+    assert report.status == "REVIEW"
 
 
 def test_editing_the_spec_changes_the_real_verdict():
@@ -176,7 +177,7 @@ def test_editing_the_spec_changes_the_real_verdict():
     raw = load("spec.approved.json")
     spec = Spec.model_validate(raw)
     tx = Transcript.model_validate(load("transcript.v3.json"))
-    assert run(spec, tx).status == "SPONSOR_READY"
+    assert run(spec, tx).status == "REVIEW"
 
     for r in raw["rules"]:
         if r["id"] == "r3":

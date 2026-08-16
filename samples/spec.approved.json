@@ -71,7 +71,7 @@
     {
       "source_quote": "The product interface should be visible on screen for at least five seconds during the segment.",
       "reason": "Visual requirement — not verifiable from audio or duration.",
-      "confirmed": true
+      "confirmed": false
     }
   ]
 }

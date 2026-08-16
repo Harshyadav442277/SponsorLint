@@ -247,8 +247,8 @@ The brief does not decompose unambiguously. Two readings give 7 and two give 8, 
 V1 fails `r3` (says "seventy percent"), `r5` (never says "Shield Mode"), `r6` (says "completely anonymous"). Everything else passes.
 
 ```
-3 FAIL · 0 WARN · 4 PASS · 1 MANUAL CONFIRMED   →   4/7   →   DO NOT SEND
-V3: 7/7 → SPONSOR READY
+3 FAIL · 0 WARN · 4 PASS · 1 MANUAL PENDING   →   4/7   →   DO NOT SEND
+V3: 7/7 automated → REVIEW until the visual item is confirmed
 ```
 
 ## The recorded segment
@@ -284,7 +284,9 @@ One ~75-second take with planted errors:
 DO NOT SEND
 ```
 
-Fix the offending lines, rerun the same approved spec → `SPONSOR READY`.
+Fix the offending lines, rerun the same approved spec → `REVIEW` while the visual requirement is
+unresolved. Explicitly confirm it only after the required interface is genuinely visible; then the
+same seven passing automated checks resolve to `SPONSOR READY`.
 
 ---
 

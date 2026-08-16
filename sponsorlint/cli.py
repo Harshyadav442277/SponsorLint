@@ -29,7 +29,7 @@ SAMPLES = REPO_ROOT / "samples"
 USAGE = """SponsorLint — pre-flight QA for sponsored YouTube integrations.
 
   python -m sponsorlint demo                    zero-key demo on the committed campaign
-  python -m sponsorlint demo --arc              the DO NOT SEND -> SPONSOR READY arc
+  python -m sponsorlint demo --arc              compare the V1 and V3 verdicts
   python -m sponsorlint verify --spec S --transcript T
   python -m sponsorlint eval                    validator accuracy over labeled fixtures
   python -m sponsorlint compile BRIEF           brief -> proposed spec (needs an API key)

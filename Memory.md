@@ -29,39 +29,54 @@ This file exists so a fresh agent — new chat, new tool, new context window —
 ## Current state
 
 ```
-Phase:            NOT STARTED
-Last gate passed: —
-Clock:            T+0 not yet set
-Submittable:      NO  (becomes YES at Phase 4 gate)
+Phase:            10 complete in code. Blocked only on the recording.
+Last gate passed: Windows CLI + four-screen browser reproduction
+Clock:            built and hardened across three sessions, Aug 16 2026
+Submittable:      YES — Phase 4 gate and canonical browser arc verified
 ```
 
-**What works:** nothing yet — no code written.
+**What works, verified by running it:**
 
-**What exists:** the seven planning documents at repo root — **the only authority**. Plus `docs/SPONSORLINT_BIBLE.md`, a reference narrative that is *not* an authority (`Decisions.md` D20) — if you edit a root doc, update it or mark it `STALE`. Other superseded plans deleted; git history retains them.
+- `python -m sponsorlint demo` → `3 FAIL · 0 WARN · 4 PASS · 1 MANUAL` → `4/7` → `DO NOT SEND`
+- `python -m sponsorlint demo --arc` → `V1 4/7 DO NOT SEND` → `V3 7/7 SPONSOR READY`
+- `python -m sponsorlint eval` → 30 fixtures, 29 correct, **96.7%**, 0 False PASSes, 1 False FAIL
+- `python -m pytest tests -q` → **109 passed, 1 xfailed** in ~0.5s
+- `python -m sponsorlint serve` → full four-screen flow drives end to end in a browser
+- All six validators, the engine, normalization, the eval harness, the terminal report
+- `compile` / `transcribe` / `analyze` are written but **not exercised live** (no key, no video)
 
-**Next action:** Start `Phases.md` `T+0:00 – 0:15` — create the repo skeleton and both requirements files.
+**Verified in fresh `.venv-current` on Windows (demo + test dependencies):**
+
+- `demo` and `eval` both run and exit 0
+- `demo --arc` renders Unicode terminal output under Windows without a CP-1252 crash
+- API regression test drives sample → approve → V1 → V3 → stored report
+- In-app browser drives all four screens to both canonical verdicts with no console warnings/errors
+- AST scan still finds zero module-scope `faster_whisper` / `pypdf` / `anthropic` / `torch` imports on the demo path
+- The earlier `.venv-judge` no-ffmpeg reproduction remains historical evidence; its Python 3.12 base was removed from this machine, so its launcher is now stale
+
+**Next action:** record `samples/sponsor-cut-v1.mp4` from `samples/script.md`, then
+`python -m sponsorlint transcribe samples/sponsor-cut-v1.mp4 -o samples/transcript.v1.json`.
+Nothing else changes — the verdict is computed from whatever the transcript says.
 
 ---
 
 ## Gate tracker
 
-Mark each as it passes. This is the fastest read of project status.
-
 | Phase | Gate | Status |
 |---|---|---|
-| — | Repo exists, demo deps install clean | ☐ |
-| 0 | Brief + V1 exist; Whisper hears the planted errors | ☐ |
-| 1 | One command → one real verdict from cached transcript | ☐ |
-| 2 | All six validators produce verdicts on V1 | ☐ |
-| 3 | `eval` prints real metrics, no hardcoded score | ☐ |
-| **4** | **Fresh clone → `demo` → real output, no key** ← **SUBMITTABLE** | ☐ |
-| 5 | Prose brief → correct spec, `min_seconds: 60` extracted | ☐ |
-| 6 | Editing `73%` → `70%` flips the real verdict | ☐ |
-| 7 | Fresh MP4 → real report, no manual file editing | ☐ |
-| 8 | Judge understands the report without a terminal | ☐ |
-| 9 | `DO NOT SEND → SPONSOR READY` arc runs clean twice | ☐ |
-| 10 | README complete with real eval numbers | ☐ |
-| — | Clean clone, fresh venv, everything runs | ☐ |
+| — | Repo exists, demo deps install clean | ☑ |
+| 0 | Brief + V1 exist; Whisper hears the planted errors | ☐ **brief/script/PDF exist; V1 not recorded** |
+| 1 | One command → one real verdict from cached transcript | ☑ |
+| 2 | All six validators produce verdicts on V1 | ☑ |
+| 3 | `eval` prints real metrics, no hardcoded score | ☑ 96.7% |
+| **4** | **Fresh clone → `demo` → real output, no key** ← **SUBMITTABLE** | ☑ verified in `.venv-judge` |
+| 5 | Prose brief → correct spec, `min_seconds: 60` extracted | ☐ **code complete, no live API call made** |
+| 6 | Editing `73%` → `70%` flips the real verdict | ☑ verified in the browser and in `tests/test_engine.py` |
+| 7 | Fresh MP4 → real report, no manual file editing | ☐ **code complete, no video to try** |
+| 8 | Judge understands the report without a terminal | ☑ |
+| 9 | `DO NOT SEND → SPONSOR READY` arc runs clean twice | ☑ on fixtures; re-verify after recording |
+| 10 | README complete with real eval numbers | ☑ |
+| — | Clean clone, fresh venv, everything runs | ☑ |
 
 ---
 
@@ -70,27 +85,29 @@ Mark each as it passes. This is the fastest read of project status.
 Mirrors `PRD.md` §6. Check off only when actually verified, not when believed.
 
 ```
-☐  1  Approved spec + transcript → deterministic results
-☐  2  MUST_SAY pass/fail
-☐  3  MUST_NOT_SAY + timestamp, no partial-substring false fire
-☐  4  "seventy-three percent" PASSES 73%
-☐  5  "seventy percent" FAILS 73%
-☐  6  Spoken URL normalizes
-☐  7  Spoken promo code normalizes
-☐  8  Disclosure detected with timestamp
-☐  9  DURATION reads transcript.duration_seconds (validator never shells out)
-☐ 10  Prose brief compiles to valid schema
-☐ 11  Every rule carries source_quote
-☐ 12  Unverifiable requirements → MANUAL REVIEW
-☐ 13  User can edit / add / delete rules
-☐ 14  Edited spec changes the real verdict
-☐ 15  Fresh MP4 transcribed and verified
-☐ 16  eval reports actual metrics
-☐ 17  demo works with no credentials, no download
-☐ 18  Every failure shows expected/detected/timestamp/evidence/source
-☐ 19  Readiness states resolve correctly
-☐ 20  No hardcoded verdicts anywhere
+☑  1  Approved spec + transcript → deterministic results
+☑  2  MUST_SAY pass/fail
+☑  3  MUST_NOT_SAY + timestamp, no partial-substring false fire
+☑  4  "seventy-three percent" PASSES 73%
+☑  5  "seventy percent" FAILS 73%
+☑  6  Spoken URL normalizes                    (4 forms, tests/test_normalize_urls.py)
+☑  7  Spoken promo code normalizes             (H-A-R-S-H two zero → HARSH20)
+☑  8  Disclosure detected with timestamp
+☑  9  DURATION reads transcript.duration_seconds (validator never shells out)
+☐ 10  Prose brief compiles to valid schema     — needs one live API call
+☑ 11  Every rule carries source_quote          (enforced in models.py, rejected without)
+☑ 12  Unverifiable requirements → MANUAL REVIEW
+☑ 13  User can edit / add / delete rules
+☑ 14  Edited spec changes the real verdict     (browser + test_engine.py)
+☐ 15  Fresh MP4 transcribed and verified       — needs the recording
+☑ 16  eval reports actual metrics
+☑ 17  demo works with no credentials, no download, no ffmpeg
+☑ 18  Every failure shows expected/detected/timestamp/evidence/source
+☑ 19  Readiness states resolve correctly       (all three, plus manual-review isolation)
+☑ 20  No hardcoded verdicts anywhere
 ```
+
+18 of 20 pass. The two open ones both need an artifact only the creator can produce (an API key, a recording) — no code is missing for either.
 
 ---
 
@@ -101,20 +118,61 @@ Pinned so nobody has to re-derive them.
 | | |
 |---|---|
 | Fictional brand | `Aegis VPN` · `aegisvpn.com/alex` · `Shield Mode` · `73%` · `HARSH20` |
-| Planted errors in V1 | "seventy percent" (~0:43) · no "Shield Mode" · "completely anonymous" (~0:31) |
+| Planted errors in V1 | "seventy percent" (0:43) · no "Shield Mode" · "completely anonymous" (0:31) |
 | Expected V1 verdict | 3 FAIL · 0 WARN · 4 PASS · 1 MANUAL → `4/7` → `DO NOT SEND` |
 | Transcript fixture | `samples/transcript.v1.json` — **cached, never re-run Whisper in dev** |
 | Whisper config | `faster-whisper`, `base.en`, **CPU only, no GPU path** |
 | Fuzzy scorer | `rapidfuzz.fuzz.partial_ratio` >= 90 on the **joined** transcript. Never `ratio`, never `partial_token_set_ratio` |
 | Canonical spec | 7 rules, all `severity: error` — see `PRD.md` §5 |
 | Demo command | `python -m sponsorlint demo` — no key, no download, run from repo root |
+| Real eval number | **96.7%** · 30 fixtures · 0 False PASSes · 1 False FAIL (documented limitation) |
 | Never cut | eval number · zero-key demo · README |
+
+### Measured values, so nobody re-litigates them
+
+| Needle vs haystack | `partial_ratio` | Consequence |
+|---|---:|---|
+| `shield mode` / "try sheild mode today" (Whisper typo) | 90.9 | PASS — barely over threshold |
+| `shield mode` / "try mode shield today" | 81.8 | FAIL |
+| `shield mode` / "try the shield feature today" | 72.7 | FAIL |
+| `completely anonymous` / "completely anonymou online" | 95.0 | MANUAL REVIEW, never FAIL |
+| `aegisvpn.com/alex` / "aegis.com/alex" | 82.4 | FAIL — 7.6 points of headroom, hence no URL fuzzing |
+| `aegisvpn.com/alex` / "aegisvpn.com/jordan" | 76.5 | FAIL |
 
 ---
 
 ## Session log
 
 *Newest first. One block per working session.*
+
+### Session 3 — Windows hardening + browser QA · Aug 16, 2026
+
+- Preserved the existing untracked build and created `.venv-current` from the bundled Python 3.12 runtime after discovering that `.venv` and `.venv-judge` point to a removed interpreter
+- Added a repo-local `pytest.ini`; without it, pytest inherited `C:\Users\hyada\pyproject.toml`, chose the home directory as `rootdir`, and failed against the filesystem sandbox before collecting this project's tests
+- Fixed the Windows CLI crash by switching process-owned stdout/stderr to UTF-8 before rendering the box-drawing report; added a regression test
+- Added an end-to-end FastAPI regression test for sample load → approval → V1 `DO_NOT_SEND` → V3 `SPONSOR_READY` → persisted report, plus the current `httpx2` test dependency
+- Drove the same arc through the rendered four-screen UI in the in-app browser and checked the finished report visually; no browser warnings or errors
+- Final gate: **109 passed, 1 intentional xfail** · eval **96.7%** · **0 False PASSes**
+
+### Session 2 — the build · Aug 16, 2026
+
+Built the whole thing, in the phase order `Phases.md` specifies, verifying each gate by running it.
+
+- **Phase 0:** `samples/brief.md` verbatim from `PRD.md` §5 (not "improved"), `brief.pdf` generated by a dependency-free `tools/make_brief_pdf.py`, `script.md` with the three planted errors marked and the three V3 replacement lines, and both transcript fixtures hand-authored to match the script (see Deviations D-1)
+- **Phase 1–2:** `models.py` with the pinned per-type payload, the normalization pipeline, the joined-transcript `Haystack` with two views and offset maps, all six validators, engine with three-clause readiness resolution
+- **Phase 3:** 30 labeled fixtures. First pass scored 30/30, which meant the fixtures were too easy — swapped six weak cases for six harder ones and the real number became 96.7%
+- **Phase 4:** zero-key demo, `--arc`, AST import check, and the `.venv-judge` verification
+- **Phase 5:** pypdf extraction, versioned prompt, `claude-opus-5` structured outputs against the `Spec` model, one retry then surface
+- **Phase 6–8:** FastAPI + Jinja2 + vanilla JS, three screens plus the report, `Design.md` tokens applied literally
+- **Phase 10:** README in the `Phases.md` order, eval number above the feature list
+
+**Three real bugs found by running things, not by reading them:**
+
+1. `normalize_text` strips `:`, so `https://x` arrived as `https //x` and the scheme regex never matched. Caught by `tests/test_normalize_urls.py`.
+2. `templates.TemplateResponse("index.html", {"request": request})` — the installed Starlette requires the newer `(request, name)` signature and threw `TypeError: unhashable type: 'dict'` on every page load. Caught by opening the page.
+3. I wrote "measured 90.3" into a code comment about URL fuzzing from memory. The actual measurement is **82.4**. Corrected in the comment and pinned in the table above. Do not state a measurement you have not run.
+
+**Still not done:** the recording. Everything downstream of it is built and tested against fixtures.
 
 ### Session 1 — hardening · Aug 16, 2026
 
@@ -138,39 +196,99 @@ Pinned so nobody has to re-derive them.
 
 ## Known issues
 
-*Anything broken, flaky, or deferred. Include enough detail to act without asking.*
+```
+[ISSUE] Disclosure matching misses "this is sponsored content"
+  where:  sponsorlint/lint/disclosure.py DISCLOSURE_PATTERNS
+  repro:  python -m sponsorlint eval  ->  disclosure/known-limitation-unlisted-phrasing
+  impact: one measured False FAIL. Documented in the README limitations and kept in
+          the fixture set deliberately, so the published number stays honest.
+  status: open by choice. Architecture.md §5.3 pins the five accepted phrasings;
+          adding a sixth is a scope decision, not a bug fix. Do not quietly widen it.
 
-```
-(none yet)
-```
+[ISSUE] Recording does not exist yet
+  where:  samples/sponsor-cut-v1.mp4, samples/sponsor-cut-v3.mp4
+  repro:  ls samples/*.mp4
+  impact: GATE 2:00 (Whisper hears all seven critical strings) is UNTESTED.
+          `aegisvpn.com/alex` is a fabricated brand name base.en may mangle -- if it
+          does, reword the script BEFORE recording, per Phases.md.
+  status: open. Blocks acceptance tests 15 and the real GATE 9.
 
-Format:
-```
-[ISSUE] <one-line symptom>
-  where:  file:line or command
-  repro:  exact steps
-  impact: blocks Phase N / cosmetic / demo risk
-  status: open / worked around / fixed in <commit>
+[ISSUE] Compiler never called live
+  where:  sponsorlint/brief/compile.py
+  repro:  ANTHROPIC_API_KEY=... python -m sponsorlint compile samples/brief.pdf
+  impact: acceptance test 10 unverified. If it fails, Phase 5 is cut per Phases.md
+          and the committed hand-written spec carries the demo -- the zero-key path
+          does not need the compiler at all.
+  status: open. Blocks nothing that is already working.
 ```
 
 ---
 
 ## Deviations from the plan
 
-*Anything done differently from `PRD.md` / `Architecture.md` / `Rules.md` / `Phases.md`, and why. If a deviation turns out to be right, promote it into the source document and note that here.*
+*Anything done differently from `PRD.md` / `Architecture.md` / `Rules.md` / `Phases.md`, and why.*
 
-```
-(none yet)
-```
+**D-1 · Transcript fixtures are hand-authored, not Whisper output.** `Phases.md` Phase 1 says
+"transcribe V1 once". There is no V1 to transcribe yet. `samples/transcript.v1.json` and
+`.v3.json` match `samples/script.md` line for line with realistic segment boundaries and timings.
+Every validator, the eval and the demo run for real against them; only the *provenance* of the
+text is different. Flagged in `samples/README.md` and in the README limitations. **Regenerate both
+with `transcribe` once the takes exist** — nothing else changes.
+
+**D-2 · Eval fixture set rebalanced, count held at 30.** The first 30 scored 30/30, which measures
+the fixtures rather than the tool. Dropped six weak cases (`must_say/exact`,
+`must_say/case-and-punctuation`, `must_not_say/negated-still-spoken`,
+`exact_value/spelled-out-unhyphenated`, `url_or_cta/mixed-case`, `duration/inside-window`) and
+added six harder ones, including one **deliberate known-limitation case labeled by ground truth**
+that produces a real False FAIL. Count stays inside the documented 24–30 band.
+
+**D-3 · `URL_OR_CTA` does not fuzzy-match URLs or promo codes.** `Architecture.md` §5.3 says
+"canonicalize both sides, then containment"; it does not forbid a fuzzy fallback, and my first
+draft had one. A tracked URL is an identifier, not a phrase — the same class of thing as a numeric
+value, which `Rules.md` §1.6 forbids fuzzing. Measured margin is only 7.6 points
+(`aegisvpn.com/alex` vs `aegis.com/alex` = 82.4). Fuzzy is now used only for prose CTAs.
+
+**D-4 · `transcribe` falls back to the decoder's own duration when ffprobe is missing.**
+`Rules.md` §3 says "clear message naming ffmpeg as the missing dependency". It does that, on
+stderr, and then uses the duration faster-whisper reports from its own decode rather than failing
+the whole transcription. Not silent, and strictly better than losing the transcript.
+
+**D-5 · The compiler prompt carries a `SCHEMA_NOTES` addendum.** `Architecture.md` §9's prompt
+alone cannot produce the disclosure-placement shape §5.4 mandates
+(`within_first_seconds: null, needs_review: true` when the brief states placement in words but
+gives no number). The addendum states the per-type payload rules and that one behavior. §9's text
+is unchanged and comes first.
+
+**D-6 · `Report.status` uses the readiness values, not `"FAIL"`.** `Architecture.md` §4.5's
+example JSON shows `"status": "FAIL"`, which contradicts §5.5 and `PRD.md` §3. Went with the
+normative three states (`DO_NOT_SEND` / `REVIEW` / `SPONSOR_READY`) and added a `label` property
+for display.
+
+**D-7 · `Result` gained an `advisory` field.** Required by §5.4's disclosure advisory, and reused
+for the MANUAL_REVIEW reason and the MUST_SAY closest-match hint. Never a verdict.
+
+**D-8 · The review screen has no [Edit] mode.** `Design.md` §5.4 shows `[Edit] [Del]`. Fields are
+always live inputs instead, with Delete kept. Fewer clicks, and it makes GATE 12:00 demonstrable
+in about four seconds.
+
+**D-9 · No server-side `fallbacks` on the compiler call.** The Anthropic guidance is to opt into
+refusal fallbacks by default on `claude-opus-5`. `client.messages.parse()` — the clean structured-
+output path that lets the API constraint and the Pydantic validation be the same schema — is not
+on the beta namespace, and combining the two is an unverified shape. A refusal instead surfaces as
+a readable error, which is what `Rules.md` §3 asks for anyway.
+
+**D-10 · Timecode buttons copy, they do not seek.** There is no video player in the UI, and
+jump-to-timestamp is cut #2 in `Rules.md` §9. The button is still a real keyboard-reachable
+`<button>`; clicking copies `00:43` so it can be pasted into an editor timeline.
 
 ---
 
 ## Cut log
 
-*What was dropped, when, and why. Prevents re-litigating and gives the README's limitations section a factual basis.*
-
 ```
-(nothing cut yet)
+Nothing cut. Every feature in PRD.md §4.1 is implemented, including the eval harness
+and the zero-key demo. Stretch items from §4.2 not built: jump-to-timestamp seeking
+(no player), downloadable HTML report, demo video.
 ```
 
 Cut order from `Rules.md` §9: demo video → jump-to-timestamp → UI polish → web UI entirely.
@@ -179,6 +297,8 @@ Cut order from `Rules.md` §9: demo video → jump-to-timestamp → UI polish �
 
 ## Handoff note
 
-*Overwrite this every session with what the next agent most needs to know. Two or three sentences, no more.*
-
-> Nothing has been built. Start at `Phases.md` `T+0:00`. Read `PRD.md` §5 before writing the demo brief and do not "improve" it — every sentence in it is load-bearing, and `Decisions.md` D8 explains why.
+> Everything is built and the zero-key path is verified in a clean demo-only venv — the project is
+> submittable as it stands. The one missing artifact is the recording: write it from
+> `samples/script.md`, check GATE 2:00 (all seven critical strings, both columns) *before*
+> committing to the take, then regenerate both transcripts with `transcribe`. Read
+> **Deviations D-1** first — the committed transcripts are authored fixtures, and the README says so.

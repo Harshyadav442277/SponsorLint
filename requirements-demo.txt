@@ -1,0 +1,9 @@
+# Zero-key demo path. Six packages. No model download, no API key, no ffmpeg.
+#   pip install -r requirements-demo.txt
+#   python -m sponsorlint demo
+fastapi
+uvicorn
+jinja2
+pydantic
+rapidfuzz
+python-multipart

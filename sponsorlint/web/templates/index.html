@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SponsorLint</title>
+  <link rel="stylesheet" href="/static/app.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='14' font-size='14'>&#9989;</text></svg>">
+</head>
+<body>
+<div class="container">
+
+  <header class="masthead">
+    <h1>SponsorLint</h1>
+    <p>Pre-flight QA for sponsored YouTube integrations.</p>
+  </header>
+
+  <ol class="flow" id="flow">
+    <li data-step="upload" aria-current="step">1 · Brief</li>
+    <li data-step="review">2 · Review spec</li>
+    <li data-step="processing">3 · Check</li>
+    <li data-step="report">4 · Report</li>
+  </ol>
+
+  <div class="notice notice--error" id="error" role="alert" hidden></div>
+
+  <!-- ---------------------------------------------------- 1. upload -->
+  <section class="screen is-active" id="screen-upload">
+    <div class="panel">
+      <h2>Start with the sponsor brief</h2>
+      <p class="hint">SponsorLint turns the brief into executable checks, you review them, then it
+        runs them against the recorded segment.</p>
+
+      <div class="actions">
+        <button class="btn-primary" id="load-sample" type="button">Load sample campaign</button>
+        <span class="muted">No API key, no upload, no model download.</span>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Or compile your own</h2>
+      <p class="hint">Upload a PDF or paste the brief text. This step is the only one that calls a
+        model, and it needs <code class="mono">ANTHROPIC_API_KEY</code>.</p>
+
+      <div class="grid-2">
+        <label class="field">
+          <span>Brief file (PDF, MD, TXT)</span>
+          <input type="file" id="brief-file" accept=".pdf,.md,.txt,.markdown">
+        </label>
+        <label class="field">
+          <span>Or paste the brief</span>
+          <textarea id="brief-text" placeholder="Paste the sponsor brief here…"></textarea>
+        </label>
+      </div>
+
+      <div class="actions">
+        <button class="btn-ghost" id="compile" type="button">Compile Brief</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------- 2. review -->
+  <section class="screen" id="screen-review">
+    <div class="panel">
+      <h2>Review the compiled requirements</h2>
+      <p class="hint">Every rule cites the sentence it came from. Edit anything that is wrong, add
+        what is missing, delete what does not belong. <strong>The approved spec is what runs</strong> —
+        not the extraction.</p>
+
+      <div class="review">
+        <div class="review-head">
+          <div>Source brief</div>
+          <div>Compiled requirements</div>
+        </div>
+        <div id="review-rows"></div>
+      </div>
+
+      <div class="review-foot">
+        <span id="review-count" class="tabular"></span>
+        <span class="spacer"></span>
+        <button class="btn-ghost" id="add-rule" type="button">+ Add Requirement</button>
+        <button class="btn-primary" id="approve" type="button">Approve &amp; Check Video →</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Manual review</h2>
+      <p class="hint">Requirements SponsorLint cannot verify from audio or duration. Never dropped,
+        never guessed, never counted in the score.</p>
+      <div id="manual-list"></div>
+    </div>
+
+    <details class="panel">
+      <summary class="mono">Source brief text</summary>
+      <pre class="brief-text" id="brief-display"></pre>
+    </details>
+  </section>
+
+  <!-- ------------------------------------------------ 3. processing -->
+  <section class="screen" id="screen-processing">
+    <div class="panel">
+      <h2>Choose the recorded segment</h2>
+      <p class="hint">Pick a committed take to run with no ffmpeg and no model download, or upload a
+        fresh MP4 to transcribe for real.</p>
+
+      <div class="grid-2">
+        <label class="field">
+          <span>Committed take</span>
+          <select id="take"></select>
+        </label>
+        <label class="field">
+          <span>Or upload a video</span>
+          <input type="file" id="video-file" accept="video/*,audio/*">
+        </label>
+      </div>
+
+      <div class="actions">
+        <button class="btn-primary" id="run-check" type="button">Run Check</button>
+        <button class="btn-ghost" id="back-to-review" type="button">← Back to spec</button>
+      </div>
+    </div>
+
+    <div class="panel" id="progress-panel" hidden>
+      <h2>Progress</h2>
+      <ul class="steps" id="steps"></ul>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------- 4. report -->
+  <section class="screen" id="screen-report">
+    <div class="report-column">
+      <div id="verdict"></div>
+      <div id="findings"></div>
+
+      <div class="actions">
+        <button class="btn-ghost" id="recheck" type="button">← Edit the spec and re-run</button>
+        <button class="btn-ghost" id="start-over" type="button">Start over</button>
+      </div>
+    </div>
+  </section>
+
+</div>
+<script src="/static/app.js"></script>
+</body>
+</html>

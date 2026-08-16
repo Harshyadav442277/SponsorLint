@@ -1,0 +1,18 @@
+{
+  "source": "sponsor-cut-v1.mp4",
+  "duration_seconds": 74.2,
+  "segments": [
+    { "start": 0.0,  "end": 3.8,  "text": "This video is sponsored by Aegis VPN." },
+    { "start": 3.8,  "end": 11.4, "text": "I've been using them for about three months now, and honestly it's the one subscription I haven't thought about cancelling." },
+    { "start": 11.4, "end": 18.6, "text": "If you've ever connected to hotel Wi-Fi and immediately regretted it, you already know the problem." },
+    { "start": 18.6, "end": 26.2, "text": "Aegis runs its own network, so your traffic isn't sitting on some shared box in a data center you've never heard of." },
+    { "start": 26.2, "end": 31.2, "text": "The apps are on everything, phone, laptop, even my TV." },
+    { "start": 31.2, "end": 35.4, "text": "It keeps you completely anonymous online." },
+    { "start": 35.4, "end": 43.1, "text": "Setup took me maybe two minutes, and I haven't touched a setting since." },
+    { "start": 43.1, "end": 48.4, "text": "You can save up to seventy percent using my link." },
+    { "start": 48.4, "end": 55.6, "text": "That's AegisVPN.com/Alex, and the offer runs through the end of September." },
+    { "start": 55.6, "end": 63.2, "text": "I'd honestly recommend it even without the discount, but the discount does make it very easy." },
+    { "start": 63.2, "end": 71.0, "text": "So go to aegisvpn.com/alex and get yourself covered before your next trip." },
+    { "start": 71.0, "end": 74.2, "text": "Alright, back to the video." }
+  ]
+}

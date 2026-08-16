@@ -1,0 +1,9 @@
+# Full development environment.
+# The demo path deliberately needs none of the extras below --- see requirements-demo.txt.
+-r requirements-demo.txt
+
+pypdf
+faster-whisper
+anthropic
+pytest
+httpx2

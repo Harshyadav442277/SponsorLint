@@ -1,0 +1,220 @@
+{
+  "description": "30 labeled validator cases. Pure text, no video, no Whisper, no API calls. These are also the unit tests: written once, used twice (Rules.md §4). Every case is labeled with the GROUND TRUTH — what the creator actually did — not with what SponsorLint happens to return. A case SponsorLint gets wrong stays in the set and shows up in the metrics.",
+  "cases": [
+    {
+      "id": "must_say/straddles-segment-break",
+      "note": "The phrase is split across a Whisper segment break. Per-segment matching scores 70.6 and fails; the joined transcript scores 100.",
+      "rule": {"id": "f", "type": "MUST_SAY", "label": "Feature mention", "source_quote": "Please mention Shield Mode by name at least once.", "phrases": ["Shield Mode"]},
+      "transcript": {"duration_seconds": 75.0, "segments": [{"start": 20.0, "end": 22.4, "text": "You should definitely try Shield"}, {"start": 22.4, "end": 25.1, "text": "Mode when you sign up."}]},
+      "expected": "PASS"
+    },
+    {
+      "id": "must_say/whisper-transposition",
+      "note": "The creator said it correctly and Whisper transcribed 'sheild'. Measured partial_ratio 90.9 — just over threshold. This is the case fuzzy matching exists for.",
+      "rule": {"id": "f", "type": "MUST_SAY", "label": "Feature mention", "source_quote": "Please mention Shield Mode by name at least once.", "phrases": ["Shield Mode"]},
+      "transcript": {"duration_seconds": 75.0, "segments": [{"start": 12.0, "end": 15.0, "text": "Try Sheild Mode today, seriously."}]},
+      "expected": "PASS"
+    },
+    {
+      "id": "must_say/hard-negative-similar-feature",
+      "note": "HARD NEGATIVE. 'shield feature' is not 'Shield Mode'. Measured partial_ratio 72.7. partial_token_set_ratio scores this 100.0, which is why that scorer is banned.",
+      "rule": {"id": "f", "type": "MUST_SAY", "label": "Feature mention", "source_quote": "Please mention Shield Mode by name at least once.", "phrases": ["Shield Mode"]},
+      "transcript": {"duration_seconds": 75.0, "segments": [{"start": 12.0, "end": 15.0, "text": "Try the shield feature today."}]},
+      "expected": "FAIL"
+    },
+    {
+      "id": "must_say/hard-negative-word-order",
+      "note": "HARD NEGATIVE. Both words present, wrong order, not the product name. Measured partial_ratio 81.8 — 8 points of headroom.",
+      "rule": {"id": "f", "type": "MUST_SAY", "label": "Feature mention", "source_quote": "Please mention Shield Mode by name at least once.", "phrases": ["Shield Mode"]},
+      "transcript": {"duration_seconds": 75.0, "segments": [{"start": 12.0, "end": 15.0, "text": "Try mode shield today."}]},
+      "expected": "FAIL"
+    },
+    {
+      "id": "must_say/hard-negative-short-needle",
+      "note": "HARD NEGATIVE. partial_ratio('vpn', 'very private network') is 100.0. Needles under 8 characters are matched exactly, never fuzzed.",
+      "rule": {"id": "f", "type": "MUST_SAY", "label": "Brand mention", "source_quote": "Say VPN at least once.", "phrases": ["VPN"]},
+      "transcript": {"duration_seconds": 75.0, "segments": [{"start": 4.0, "end": 7.0, "text": "It is a very private network for your traffic."}]},
+      "expected": "FAIL"
+    },
+
+    {
+      "id": "must_not_say/violation",
+      "note": "The prohibited phrase occurs verbatim.",
+      "rule": {"id": "f", "type": "MUST_NOT_SAY", "label": "Prohibited claims", "source_quote": "Avoid describing Aegis VPN as \"completely anonymous\" or \"unhackable.\"", "phrases": ["completely anonymous", "unhackable"]},
+      "transcript": {"duration_seconds": 75.0, "segments": [{"start": 31.2, "end": 35.4, "text": "This makes you completely anonymous."}]},
+      "expected": "FAIL"
+    },
+    {
+      "id": "must_not_say/hard-negative-substring",
+      "note": "HARD NEGATIVE, the substring trap. 'browse anonymously' must not fire a rule prohibiting 'completely anonymous'. A false FAIL sends the creator back to re-edit something that was fine.",
+      "rule": {"id": "f", "type": "MUST_NOT_SAY", "label": "Prohibited claims", "source_quote": "Avoid describing Aegis VPN as \"completely anonymous\" or \"unhackable.\"", "phrases": ["completely anonymous"]},
+      "transcript": {"duration_seconds": 75.0, "segments": [{"start": 18.0, "end": 21.0, "text": "It lets you browse anonymously on any network."}]},
+      "expected": "PASS"
+    },
+    {
+      "id": "must_not_say/second-phrase-of-the-rule",
+      "note": "One brief sentence prohibiting two phrases is one rule with two phrases. The second must fire too.",
+      "rule": {"id": "f", "type": "MUST_NOT_SAY", "label": "Prohibited claims", "source_quote": "Avoid describing Aegis VPN as \"completely anonymous\" or \"unhackable.\"", "phrases": ["completely anonymous", "unhackable"]},
+      "transcript": {"duration_seconds": 75.0, "segments": [{"start": 40.0, "end": 43.0, "text": "They claim the network is unhackable."}]},
+      "expected": "FAIL"
+    },
+    {
+      "id": "must_not_say/near-miss-goes-to-manual",
+      "note": "A transcription slip lands close to the prohibited phrase without matching it. Measured partial_ratio 95.0. Ambiguity routes to MANUAL REVIEW — never to FAIL, because a false FAIL is the expensive error.",
+      "rule": {"id": "f", "type": "MUST_NOT_SAY", "label": "Prohibited claims", "source_quote": "Avoid describing Aegis VPN as \"completely anonymous\" or \"unhackable.\"", "phrases": ["completely anonymous"]},
+      "transcript": {"duration_seconds": 75.0, "segments": [{"start": 31.0, "end": 34.0, "text": "It keeps you completely anonymou online."}]},
+      "expected": "MANUAL_REVIEW"
+    },
+
+    {
+      "id": "exact_value/spelled-out-hyphenated",
+      "note": "The demo's centrepiece. No regex extracts this; the run-scanner folds it to 73.",
+      "rule": {"id": "f", "type": "EXACT_VALUE", "label": "Campaign discount", "source_quote": "viewers should be told that they can save seventy-three percent", "expected": "73%"},
+      "transcript": {"duration_seconds": 75.0, "segments": [{"start": 43.1, "end": 48.0, "text": "You can save seventy-three percent with my link."}]},
+      "expected": "PASS"
+    },
+    {
+      "id": "exact_value/hard-negative-wrong-number",
+      "note": "HARD NEGATIVE and the whole product in one line. 70 is not 73, and no fuzzy threshold is ever allowed to bridge that.",
+      "rule": {"id": "f", "type": "EXACT_VALUE", "label": "Campaign discount", "source_quote": "viewers should be told that they can save seventy-three percent", "expected": "73%"},
+      "transcript": {"duration_seconds": 75.0, "segments": [{"start": 43.1, "end": 48.0, "text": "You can save up to seventy percent using my link."}]},
+      "expected": "FAIL"
+    },
+    {
+      "id": "exact_value/digits-from-whisper",
+      "note": "Whisper emits digits sometimes and words other times, unpredictably. Both must pass.",
+      "rule": {"id": "f", "type": "EXACT_VALUE", "label": "Campaign discount", "source_quote": "viewers should be told that they can save seventy-three percent", "expected": "73%"},
+      "transcript": {"duration_seconds": 75.0, "segments": [{"start": 43.1, "end": 48.0, "text": "You can save 73 percent with my link."}]},
+      "expected": "PASS"
+    },
+    {
+      "id": "exact_value/hard-negative-leading-digit",
+      "note": "HARD NEGATIVE. 'one hundred and seventy three percent' folds to 173%. A naive substring test finds '73%' inside it.",
+      "rule": {"id": "f", "type": "EXACT_VALUE", "label": "Campaign discount", "source_quote": "viewers should be told that they can save seventy-three percent", "expected": "73%"},
+      "transcript": {"duration_seconds": 75.0, "segments": [{"start": 43.1, "end": 48.0, "text": "Traffic grew one hundred and seventy three percent last year."}]},
+      "expected": "FAIL"
+    },
+    {
+      "id": "exact_value/hard-negative-trailing-digit",
+      "note": "HARD NEGATIVE. '73' must not match inside '730'.",
+      "rule": {"id": "f", "type": "EXACT_VALUE", "label": "Support code", "source_quote": "Quote code 73 when contacting support.", "expected": "73"},
+      "transcript": {"duration_seconds": 75.0, "segments": [{"start": 10.0, "end": 13.0, "text": "Our support line is 730 4400."}]},
+      "expected": "FAIL"
+    },
+    {
+      "id": "exact_value/hard-negative-decimal",
+      "note": "HARD NEGATIVE. 73.5% is not 73%. Rounding a discount in the creator's favour is exactly the mistake that costs a revision round.",
+      "rule": {"id": "f", "type": "EXACT_VALUE", "label": "Campaign discount", "source_quote": "viewers should be told that they can save seventy-three percent", "expected": "73%"},
+      "transcript": {"duration_seconds": 75.0, "segments": [{"start": 43.1, "end": 48.0, "text": "You can save seventy three point five percent."}]},
+      "expected": "FAIL"
+    },
+    {
+      "id": "exact_value/currency",
+      "note": "$20 == twenty dollars == 20 dollars.",
+      "rule": {"id": "f", "type": "EXACT_VALUE", "label": "Signup credit", "source_quote": "Mention the twenty dollar credit.", "expected": "$20"},
+      "transcript": {"duration_seconds": 75.0, "segments": [{"start": 22.0, "end": 25.0, "text": "You also get twenty dollars off your first order."}]},
+      "expected": "PASS"
+    },
+    {
+      "id": "exact_value/promo-code-spelled-aloud",
+      "note": "Read out letter by letter and digit by digit. Uses the per-digit map — the arithmetic folder would turn 'two zero' into 2.",
+      "rule": {"id": "f", "type": "EXACT_VALUE", "label": "Promo code", "source_quote": "Viewers should use promo code HARSH20.", "expected": "HARSH20"},
+      "transcript": {"duration_seconds": 75.0, "segments": [{"start": 55.0, "end": 60.0, "text": "Use code H-A-R-S-H two zero at checkout."}]},
+      "expected": "PASS"
+    },
+
+    {
+      "id": "url_or_cta/spoken-punctuation",
+      "note": "'dot' and 'slash' spoken aloud, and the domain split into two words.",
+      "rule": {"id": "f", "type": "URL_OR_CTA", "label": "Campaign URL spoken", "source_quote": "and should be directed to aegisvpn.com/alex", "expected": "aegisvpn.com/alex"},
+      "transcript": {"duration_seconds": 75.0, "segments": [{"start": 48.0, "end": 52.0, "text": "Head to aegis vpn dot com slash alex to get started."}]},
+      "expected": "PASS"
+    },
+    {
+      "id": "url_or_cta/www-prefix-and-case",
+      "note": "An optional www and Whisper's inconsistent capitalization must not change the answer.",
+      "rule": {"id": "f", "type": "URL_OR_CTA", "label": "Campaign URL spoken", "source_quote": "and should be directed to aegisvpn.com/alex", "expected": "aegisvpn.com/alex"},
+      "transcript": {"duration_seconds": 75.0, "segments": [{"start": 48.0, "end": 52.0, "text": "Go to WWW.AegisVPN.com/Alex before Friday."}]},
+      "expected": "PASS"
+    },
+    {
+      "id": "url_or_cta/hard-negative-wrong-path",
+      "note": "HARD NEGATIVE. The tracked path is the entire point of a campaign URL. Same domain, wrong creator. Measured partial_ratio 76.5.",
+      "rule": {"id": "f", "type": "URL_OR_CTA", "label": "Campaign URL spoken", "source_quote": "and should be directed to aegisvpn.com/alex", "expected": "aegisvpn.com/alex"},
+      "transcript": {"duration_seconds": 75.0, "segments": [{"start": 48.0, "end": 52.0, "text": "Go to aegisvpn.com/jordan and sign up."}]},
+      "expected": "FAIL"
+    },
+    {
+      "id": "url_or_cta/hard-negative-wrong-domain",
+      "note": "HARD NEGATIVE. Measured partial_ratio 82.4 — under threshold, but by only 7.6 points. A tracked URL is an identifier, so it is never fuzzy-matched at all.",
+      "rule": {"id": "f", "type": "URL_OR_CTA", "label": "Campaign URL spoken", "source_quote": "and should be directed to aegisvpn.com/alex", "expected": "aegisvpn.com/alex"},
+      "transcript": {"duration_seconds": 75.0, "segments": [{"start": 48.0, "end": 52.0, "text": "Go to aegis.com/alex and sign up."}]},
+      "expected": "FAIL"
+    },
+
+    {
+      "id": "disclosure/present-and-early",
+      "note": "within_first_seconds is user-authored, never invented by SponsorLint.",
+      "rule": {"id": "f", "type": "MUST_DISCLOSE", "label": "Sponsorship disclosure", "source_quote": "Please make clear near the beginning of the integration that this video is sponsored by Aegis VPN.", "within_first_seconds": 15},
+      "transcript": {"duration_seconds": 75.0, "segments": [{"start": 0.0, "end": 3.8, "text": "This video is sponsored by Aegis VPN."}]},
+      "expected": "PASS"
+    },
+    {
+      "id": "disclosure/thanks-to-x-for-sponsoring",
+      "note": "A different accepted phrasing, with the brand name in the middle.",
+      "rule": {"id": "f", "type": "MUST_DISCLOSE", "label": "Sponsorship disclosure", "source_quote": "Please make clear near the beginning of the integration that this video is sponsored by Aegis VPN.", "within_first_seconds": 15},
+      "transcript": {"duration_seconds": 75.0, "segments": [{"start": 1.0, "end": 5.0, "text": "Thanks to Aegis VPN for sponsoring today's video."}]},
+      "expected": "PASS"
+    },
+    {
+      "id": "disclosure/hard-negative-unrelated-sponsorship",
+      "note": "HARD NEGATIVE. 'I sponsored a little league team once' scores 83.3 on partial_ratio against 'sponsored by' and 100.0 on partial_token_set_ratio. Disclosure uses exact containment, so neither can fire it.",
+      "rule": {"id": "f", "type": "MUST_DISCLOSE", "label": "Sponsorship disclosure", "source_quote": "Please make clear near the beginning of the integration that this video is sponsored by Aegis VPN.", "within_first_seconds": 15},
+      "transcript": {"duration_seconds": 75.0, "segments": [{"start": 2.0, "end": 6.0, "text": "I sponsored a little league team once, it was great."}]},
+      "expected": "FAIL"
+    },
+    {
+      "id": "disclosure/present-but-late",
+      "note": "Present, but after the placement window the user set.",
+      "rule": {"id": "f", "type": "MUST_DISCLOSE", "label": "Sponsorship disclosure", "source_quote": "Please make clear near the beginning of the integration that this video is sponsored by Aegis VPN.", "within_first_seconds": 15},
+      "transcript": {"duration_seconds": 75.0, "segments": [{"start": 0.0, "end": 45.0, "text": "Anyway, back to what I was saying about routers."}, {"start": 47.0, "end": 51.0, "text": "Oh, and this video is sponsored by Aegis VPN."}]},
+      "expected": "FAIL"
+    },
+    {
+      "id": "disclosure/no-placement-in-brief",
+      "note": "The brief stated no placement, so within_first_seconds is null and only presence is a requirement. Placement becomes an advisory, never a verdict.",
+      "rule": {"id": "f", "type": "MUST_DISCLOSE", "label": "Sponsorship disclosure", "source_quote": "The integration must be disclosed to viewers."},
+      "transcript": {"duration_seconds": 75.0, "segments": [{"start": 40.0, "end": 44.0, "text": "Today's sponsor is Aegis VPN, by the way."}]},
+      "expected": "PASS"
+    },
+    {
+      "id": "disclosure/known-limitation-unlisted-phrasing",
+      "note": "KNOWN LIMITATION, labeled by ground truth. The creator did disclose the sponsorship, so the requirement was satisfied. 'Sponsored content' is not one of the five accepted phrasings in lint/disclosure.py, so SponsorLint reports FAIL and this counts as a False FAIL in the metrics. Left in deliberately: an eval that only contains cases the tool already handles is not a measurement.",
+      "rule": {"id": "f", "type": "MUST_DISCLOSE", "label": "Sponsorship disclosure", "source_quote": "Please make clear near the beginning of the integration that this video is sponsored by Aegis VPN.", "within_first_seconds": 15},
+      "transcript": {"duration_seconds": 75.0, "segments": [{"start": 1.0, "end": 4.0, "text": "Quick heads up, this is sponsored content from Aegis VPN."}]},
+      "expected": "PASS"
+    },
+
+    {
+      "id": "duration/too-short",
+      "note": "Under the floor the brief set.",
+      "rule": {"id": "f", "type": "DURATION", "label": "Integration length", "source_quote": "The integration should run no shorter than one minute and no longer than one minute and thirty seconds.", "min_seconds": 60, "max_seconds": 90},
+      "transcript": {"duration_seconds": 52.0, "segments": [{"start": 0.0, "end": 52.0, "text": "..."}]},
+      "expected": "FAIL"
+    },
+    {
+      "id": "duration/too-long",
+      "note": "Over the ceiling the brief set.",
+      "rule": {"id": "f", "type": "DURATION", "label": "Integration length", "source_quote": "The integration should run no shorter than one minute and no longer than one minute and thirty seconds.", "min_seconds": 60, "max_seconds": 90},
+      "transcript": {"duration_seconds": 96.0, "segments": [{"start": 0.0, "end": 96.0, "text": "..."}]},
+      "expected": "FAIL"
+    },
+    {
+      "id": "duration/exactly-on-the-floor",
+      "note": "Boundary, and the only in-window PASS. 'No shorter than one minute' includes exactly one minute. Read from transcript.duration_seconds — the validator never shells out to ffprobe.",
+      "rule": {"id": "f", "type": "DURATION", "label": "Integration length", "source_quote": "The integration should run no shorter than one minute and no longer than one minute and thirty seconds.", "min_seconds": 60, "max_seconds": 90},
+      "transcript": {"duration_seconds": 60.0, "segments": [{"start": 0.0, "end": 60.0, "text": "..."}]},
+      "expected": "PASS"
+    }
+  ]
+}

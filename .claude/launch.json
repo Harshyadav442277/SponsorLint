@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "sponsorlint",
+      "runtimeExecutable": ".venv/Scripts/python.exe",
+      "runtimeArgs": ["-m", "sponsorlint", "serve", "--port", "8000"],
+      "port": 8000
+    }
+  ]
+}

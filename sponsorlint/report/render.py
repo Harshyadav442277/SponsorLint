@@ -103,7 +103,7 @@ def report_context(report: Report) -> dict:
             for r in report.results
         ],
         "manual_review": [
-            {"source_quote": m.source_quote, "reason": m.reason}
+            {"source_quote": m.source_quote, "reason": m.reason, "confirmed": m.confirmed}
             for m in report.manual_review
         ],
     }
@@ -114,8 +114,11 @@ def _subline(report: Report) -> str:
     if report.status == "SPONSOR_READY":
         blocking = s.passed
         line = f"All {blocking} blocking requirement{'s' if blocking != 1 else ''} passed."
-        if s.manual_review:
-            line += f" {s.manual_review} item{'s' if s.manual_review != 1 else ''} left for manual review."
+        if s.manual_confirmed:
+            line += (
+                f" {s.manual_confirmed} manual item"
+                f"{'s' if s.manual_confirmed != 1 else ''} confirmed."
+            )
         return line
 
     parts = [f"{s.fail} failed"]
@@ -123,5 +126,7 @@ def _subline(report: Report) -> str:
         parts.append(f"{s.warn} warning" + ("s" if s.warn != 1 else ""))
     parts.append(f"{s.passed} passed")
     if s.manual_review:
-        parts.append(f"{s.manual_review} manual review")
+        parts.append(f"{s.manual_review} manual unresolved")
+    if s.manual_confirmed:
+        parts.append(f"{s.manual_confirmed} manual confirmed")
     return " · ".join(parts)

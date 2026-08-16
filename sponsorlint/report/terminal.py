@@ -88,10 +88,14 @@ def render(report: Report, stream=None) -> str:
         lines.extend(_render_result(result, paint))
 
     for item in report.manual_review:
+        label = "CONFIRMED" if item.confirmed else "MANUAL"
+        color = _STATUS_COLOR["PASS"] if item.confirmed else _STATUS_COLOR["MANUAL_REVIEW"]
         lines.append(
-            f"  {paint('MANUAL', _STATUS_COLOR['MANUAL_REVIEW'], _BOLD)}  {item.reason}"
+            f"  {paint(label, color, _BOLD)}  {item.reason}"
         )
         lines.extend(_quote_block(item.source_quote, paint))
+        if item.confirmed:
+            lines.append("        Confirmed manually during spec review.")
         lines.append("")
 
     lines.append(paint("  " + "─" * _WIDTH, _DIM))
@@ -157,5 +161,7 @@ def _counts(report: Report) -> str:
         parts.append(f"{s.warn} warning" + ("s" if s.warn != 1 else ""))
     parts.append(f"{s.passed} passed")
     if s.manual_review:
-        parts.append(f"{s.manual_review} manual review")
+        parts.append(f"{s.manual_review} manual unresolved")
+    if s.manual_confirmed:
+        parts.append(f"{s.manual_confirmed} manual confirmed")
     return " · ".join(parts)

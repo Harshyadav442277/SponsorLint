@@ -1,5 +1,5 @@
 {
-  "description": "30 labeled validator cases. Pure text, no video, no Whisper, no API calls. These are also the unit tests: written once, used twice (Rules.md §4). Every case is labeled with the GROUND TRUTH — what the creator actually did — not with what SponsorLint happens to return. A case SponsorLint gets wrong stays in the set and shows up in the metrics.",
+  "description": "39 labeled validator cases. Pure text, no video, no Whisper, no API calls. These are also the unit tests: written once, used twice (Rules.md §4). Every case is labeled with the GROUND TRUTH — what the creator actually did — not with what SponsorLint happens to return. A case SponsorLint gets wrong stays in the set and shows up in the metrics.",
   "cases": [
     {
       "id": "must_say/straddles-segment-break",

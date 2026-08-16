@@ -45,7 +45,7 @@ def test_false_fails_are_only_the_known_limitations():
 
 
 def test_fixture_count_is_in_range():
-    assert 24 <= len(CASES) <= 30
+    assert len(CASES) >= 39
 
 
 def test_every_fixture_rule_carries_a_source_quote():

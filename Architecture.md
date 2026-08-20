@@ -358,7 +358,14 @@ Do not reach for `word2number`. It was tested against the strings a validator ac
 
 1. Lowercase, then `re.sub(r'(?<=[a-z])-(?=[a-z])', ' ', text)` so `seventy-three` tokenizes.
 2. Tokenize on whitespace.
-3. Walk tokens. On each **maximal run** of number-words — `UNITS` 0–19, `TENS` 20–90, `SCALES` hundred/thousand/million, absorbing an internal `and` only while a run is already open — fold the run to an int: units and tens accumulate, `hundred` multiplies the accumulator, larger scales flush it. Emit the digit string in place. Leave every other token untouched.
+3. Walk tokens. On each run of number-words — `UNITS` 0–19, `TENS` 20–90, `SCALES` hundred/thousand/million, absorbing an internal `and` only while a run is already open — fold the run to an int: units and tens accumulate, `hundred` multiplies the accumulator, larger scales flush it. Emit the digit string in place. Leave every other token untouched.
+
+   **A run is not maximal.** It is bounded twice, because a run that keeps going past its number reports a value nobody said — the one thing this stage must never do (`Rules.md` §1.6):
+
+   - **Legality.** A word that cannot continue the current number closes it and opens the next one. Summing every adjacent number-word instead turns `"nineteen ninety nine"` into `118`, `"twenty twenty four"` into `44` and `"three thirty"` into `33`. They read `19 99`, `20 24` and `3 30`.
+   - **Sentence boundary.** A token carrying a full stop ends the run, so `"chapter two. three things"` stays `"chapter 2. 3 things"` instead of folding to `"chapter 5 things"`. Whisper punctuates, so this is reachable from ordinary narration.
+
+   Compounds that genuinely combine are untouched: `seventy three` → 73, `one hundred and twenty` → 120, `twenty five hundred` → 2500, `two thousand twenty four` → 2024.
 4. Result: `"you can save up to 70 percent using my link."` The rewriter is **idempotent** on text that already contains digits — which is exactly what makes both Whisper output styles work.
 
 **`EXACT_VALUE` then does not parse at all — it is a membership test.** Canonicalize the transcript with the rewriter, then search with a boundary-guarded pattern:
@@ -369,14 +376,28 @@ re.search(rf'(?<![\d.]){re.escape(value)}(?![\d])', canonical)
 
 Verified: `73` in `"seventy-three percent"` → True · in `"seventy percent"` → False · in `"73 percent"` → True · in `"730 dollars"` → False · in `"chapter 173"` → False.
 
-**`normalize/codes.py` uses a separate per-digit map** (`two`→`2`, `zero`→`0`, concatenated, letters uppercased) — **never** the arithmetic folder, which would fold `two zero` to 2.
+**`normalize/codes.py` uses a separate per-digit map** (`two`→`2`, `zero`→`0`, concatenated, letters uppercased) — **never** the arithmetic folder, which yields `2 0` for `two zero`: two separate numbers, still not the code digits `20`.
 
 `"one minute and thirty seconds"` → 90 is the **compiler's** job (Phase 5, LLM), not the normalizer's. The normalizer correctly yields `"1 minute and 30 seconds"`; turning that into `min_seconds: 60, max_seconds: 90` is semantic work the LLM does once, at compile time.
+
+### Spoken decimals
+
+`point` after a whole number opens a **per-digit** run. This is the second place the arithmetic folder must not run, for the same reason codes are kept away from it:
+
+```
+nine point nine nine                →  9.99        (never 9 and 18)
+one point five million              →  1500000
+three point one four one five nine  →  3.14159
+```
+
+A trailing zero is kept literally, so `"nine point nine zero"` stays `9.90` and still matches a brief that wrote the price that way. The ordinary word is untouched: `"at this point five people left"` has no whole number to its left and passes straight through.
 
 ### Promo codes
 ```
 "H-A-R-S-H two zero"  ·  "HARSH two zero"  ·  "HARSH20"   →   HARSH20
 ```
+
+A brand may also write the separator into the code itself — `SAVE-20`, `SAVE_20`. Those are codes too, and the identifier gate has to say so: a value it turns away goes to the prose path and is fuzzy-matched, which §5.2 forbids for an identifier.
 
 ### URLs
 ```

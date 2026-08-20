@@ -24,9 +24,12 @@ def test_every_spoken_form_of_the_code_matches(spoken):
     assert pattern.search(normalize_text(spoken)) or pattern.search(canonicalize(spoken))
 
 
-def test_the_arithmetic_folder_would_have_destroyed_the_code():
-    # This is why codes.py keeps its own per-digit map.
-    assert rewrite_number_words("two zero") == "2"
+def test_the_arithmetic_folder_still_does_not_produce_the_code():
+    # This is why codes.py keeps its own per-digit map. The arithmetic folder
+    # no longer sums "two zero" to 2, but it yields two separate numbers, which
+    # is still not the code digits "20".
+    assert rewrite_number_words("two zero") == "2 0"
+    assert rewrite_number_words("harsh two zero") == "harsh 2 0"
 
 
 @pytest.mark.parametrize(

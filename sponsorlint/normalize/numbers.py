@@ -41,6 +41,47 @@ _TRAIL = ".%$/'-"
 
 _HYPHEN_BETWEEN_LETTERS = re.compile(r"(?<=[a-z])-(?=[a-z])")
 
+#: What may legally precede each class of number-word inside one spoken number.
+#:
+#: Without this table a run of adjacent number-words is summed no matter whether
+#: the words can actually combine, and the sum is a value nobody said:
+#:
+#:     "nineteen ninety nine"  ->  118      (19 + 90 + 9)
+#:     "twenty twenty four"    ->  44       (20 + 20 + 4)
+#:     "three thirty"          ->  33       (3 + 30)
+#:
+#: Inventing a number is the one thing this stage must never do (Rules.md §1.6).
+#: A word that cannot continue the current number closes it and starts the next
+#: one instead, so those three read 19 99, 20 24 and 3 30 — separate numbers,
+#: none of them fabricated.
+_MAY_FOLLOW: dict[str, frozenset] = {
+    "unit": frozenset({None, "tens", "hundred", "scale"}),
+    "teen": frozenset({None, "hundred", "scale"}),
+    "zero": frozenset({None}),
+    "tens": frozenset({None, "hundred", "scale"}),
+    "hundred": frozenset({None, "unit", "teen", "tens"}),
+    "scale": frozenset({None, "unit", "teen", "tens", "hundred"}),
+}
+
+
+def _kind(word: str) -> str:
+    """Classify a number-word by how it combines, not by its value."""
+    if word == "hundred":
+        return "hundred"
+    if word in SCALES:
+        return "scale"
+    if word in TENS:
+        return "tens"
+    value = UNITS[word]
+    if value == 0:
+        return "zero"
+    return "teen" if value >= 10 else "unit"
+
+
+def _may_follow(word: str, previous: str | None) -> bool:
+    """True if `word` can continue a number whose last word was `previous`."""
+    return previous in _MAY_FOLLOW[_kind(word)]
+
 
 def _split_token(tok: str) -> tuple[str, str]:
     """Return (core, trailing punctuation)."""
@@ -51,10 +92,11 @@ def _split_token(tok: str) -> tuple[str, str]:
 
 
 def _fold(run: list[str]) -> int:
-    """Fold a run of number-words to one integer.
+    """Fold one run of legally-combining number-words to a single integer.
 
     Units and tens accumulate; `hundred` multiplies the accumulator; larger
-    scales flush it.
+    scales flush it. The caller guarantees the run actually combines — see
+    `_may_follow` — so this never has to decide whether a sum is meaningful.
     """
     total = 0
     current = 0
@@ -95,25 +137,33 @@ def rewrite_number_words(text: str) -> str:
             continue
 
         run: list[str] = []
+        previous: str | None = None
         j = i
         trailing = ""
         while j < n:
             core, trail = _split_token(tokens[j])
-            if core in _NUMBER_WORDS:
+            if core in _NUMBER_WORDS and _may_follow(core, previous):
                 run.append(core)
+                previous = _kind(core)
                 trailing = trail
                 j += 1
             elif core == "and" and run and j + 1 < n:
                 # Absorb an internal "and" only while a run is already open and
-                # a number-word actually follows: "one hundred and twenty".
+                # a number-word that can legally continue it actually follows:
+                # "one hundred and twenty".
                 nxt, _ = _split_token(tokens[j + 1])
-                if nxt in _NUMBER_WORDS:
+                if nxt in _NUMBER_WORDS and _may_follow(nxt, previous):
                     run.append("and")
                     j += 1
                 else:
                     break
             else:
                 break
+
+        if not run:  # unreachable: every kind of number-word may open a run
+            out.append(tokens[i])
+            i += 1
+            continue
 
         out.append(f"{_fold(run)}{trailing}")
         i = j

@@ -77,3 +77,44 @@ def test_one_minute_and_thirty_seconds_is_not_the_normalizers_job():
 
 def test_trailing_punctuation_survives_a_fold():
     assert rewrite_number_words("save seventy-three.") == "save 73."
+
+
+@pytest.mark.parametrize(
+    "text,expected",
+    [
+        ("nineteen ninety nine", "19 99"),  # a spoken price, not 118
+        ("twenty twenty four", "20 24"),  # a spoken year, not 44
+        ("nineteen eighty four", "19 84"),  # not 103
+        ("three thirty", "3 30"),  # a time, not 33
+        ("sixty sixty", "60 60"),  # not 120
+        ("five five five", "5 5 5"),  # a spoken digit run, not 15
+        ("ten ten", "10 10"),  # not 20
+        ("two zero", "2 0"),  # the word2number defect, not folded to 2
+    ],
+)
+def test_words_that_cannot_combine_do_not_sum_into_an_invented_number(text, expected):
+    assert rewrite_number_words(text) == expected
+
+
+@pytest.mark.parametrize(
+    "text,expected",
+    [
+        ("seventy three", "73"),
+        ("one hundred and twenty", "120"),
+        ("one hundred twenty five", "125"),
+        ("twenty five hundred", "2500"),
+        ("nineteen hundred", "1900"),
+        ("two thousand twenty four", "2024"),
+        ("one million two hundred thousand", "1200000"),
+        ("one hundred five", "105"),
+    ],
+)
+def test_words_that_do_combine_still_fold_to_one_number(text, expected):
+    assert rewrite_number_words(text) == expected
+
+
+def test_a_spoken_year_no_longer_matches_a_value_nobody_said():
+    # Before the run-splitting fix "nineteen ninety nine" canonicalized to 118,
+    # so a brief requiring 118 passed against a transcript that never said it.
+    assert not contains("118", "it launched in nineteen ninety nine")
+    assert contains("99", "it launched in nineteen ninety nine")

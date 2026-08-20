@@ -7,3 +7,6 @@ __pycache__/
 .env
 uploads/
 *.tmp
+.coverage
+coverage.xml
+htmlcov/

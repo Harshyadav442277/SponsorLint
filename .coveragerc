@@ -1,0 +1,19 @@
+# Coverage is a review aid, not a gate. There is no fail_under: a number that
+# blocks a merge turns into tests written to move the number, and this suite is
+# deliberately about behaviour that matters rather than lines touched.
+
+[run]
+source = sponsorlint
+branch = True
+omit =
+    sponsorlint/__main__.py
+
+[report]
+precision = 1
+show_missing = True
+skip_covered = True
+exclude_lines =
+    pragma: no cover
+    if TYPE_CHECKING:
+    raise NotImplementedError
+    if __name__ == .__main__.:

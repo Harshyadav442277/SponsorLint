@@ -2,6 +2,11 @@
 
     "H-A-R-S-H two zero"  ·  "HARSH two zero"  ·  "HARSH20"   ->   HARSH20
 
+A brand may also write the separator into the code itself — SAVE-20, SAVE_20.
+Those are codes too, and `looks_like_code` has to say so: a code the gate turns
+away is handed to the prose path and fuzzy-matched, which is the one thing an
+identifier must never be (see lint/cta.py).
+
 This module uses a **per-digit** map. It must never share the arithmetic folder
 in `numbers.py`, which correctly folds "two zero" to 2 — right for prose,
 catastrophic for a code.
@@ -26,14 +31,32 @@ _SPELLED_RUN = re.compile(r"\b(?:[a-z][\s-]+){1,}[a-z]\b")
 _SEP = r"[\s-]?"
 
 
+#: Separators a brand writes into a code. `spoken_pattern` already strips these
+#: when it builds the match, so the gate has to admit them or the code never
+#: reaches the pattern at all.
+_SEPARATORS = "-_"
+
+
 def looks_like_code(value: str) -> bool:
-    """A promo code: one token, alphanumeric, and not plain prose."""
+    """A promo code: one token, alphanumeric once separators are removed, and
+    not plain prose.
+
+    A space still disqualifies. That is what keeps prose out, and it is why
+    dropping the separators here does not widen the gate to phrases.
+    """
     v = value.strip()
-    if " " in v or not v.isalnum():
+    if not v or " " in v:
         return False
-    has_alpha = any(c.isalpha() for c in v)
-    has_digit = any(c.isdigit() for c in v)
-    return (has_alpha and has_digit) or (has_alpha and v.isupper() and len(v) >= 4)
+
+    core = v
+    for separator in _SEPARATORS:
+        core = core.replace(separator, "")
+    if not core or not core.isalnum():
+        return False
+
+    has_alpha = any(c.isalpha() for c in core)
+    has_digit = any(c.isdigit() for c in core)
+    return (has_alpha and has_digit) or (has_alpha and core.isupper() and len(core) >= 4)
 
 
 def _digit_alternatives(digit: str) -> str:

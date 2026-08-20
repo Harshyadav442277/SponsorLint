@@ -53,3 +53,27 @@ def test_looks_like_code():
     assert looks_like_code("HARSH20")
     assert not looks_like_code("aegisvpn.com/alex")
     assert not looks_like_code("visit the link below")
+
+
+@pytest.mark.parametrize("code", ["SAVE-20", "SAVE_20", "HARSH-20", "AEGIS-VPN1"])
+def test_a_code_written_with_a_separator_is_still_a_code(code):
+    # A code the gate turns away is handed to the prose path and fuzzy-matched,
+    # which is exactly what lint/cta.py forbids for an identifier.
+    assert looks_like_code(code)
+
+
+@pytest.mark.parametrize(
+    "phrase",
+    ["well-known", "state-of-the-art", "sign-up", "two words", "vpn", "", "   "],
+)
+def test_prose_is_still_not_a_code(phrase):
+    assert not looks_like_code(phrase)
+
+
+@pytest.mark.parametrize(
+    "spoken",
+    ["use code save20", "use code save two zero", "use code s-a-v-e two zero"],
+)
+def test_a_separator_bearing_code_matches_every_spoken_form(spoken):
+    pattern = spoken_pattern("SAVE-20")
+    assert pattern.search(normalize_text(spoken)) or pattern.search(canonicalize(spoken))

@@ -1,0 +1,29 @@
+# .gitattributes settles what git stores. This settles what an editor produces
+# in the first place, so the two never have to disagree.
+#
+# The values are read off the tree rather than picked: the repository is
+# tab-free throughout, every tracked text file already ends in a newline, and
+# the indent widths below are the ones actually in use. The Python line length
+# is the working convention — two lines currently sit at 102, and nothing here
+# reflows them, since max_line_length is a hint to the editor and not a rule.
+
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
+
+[*.py]
+indent_size = 4
+max_line_length = 100
+
+[*.md]
+# Markdown gives two trailing spaces a meaning, so they are left alone here.
+trim_trailing_whitespace = false
+
+[Makefile]
+indent_style = tab

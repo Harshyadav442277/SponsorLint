@@ -6,10 +6,21 @@ from ..models import Result, Rule, Status
 
 
 def fmt_timecode(seconds: float | None) -> str:
+    """MM:SS, widening to H:MM:SS once the timestamp passes an hour.
+
+    The transcript covers the whole video, not only the sponsor segment, so an
+    integration placed late in a long upload lands past 60:00. Rendered as a
+    bare minute count that reads "62:05" — a number no editor can scrub to.
+    The player's own timecode is 1:02:05, so that is what the report shows.
+    """
     if seconds is None:
         return "--:--"
-    seconds = max(0.0, float(seconds))
-    return f"{int(seconds // 60):02d}:{int(seconds % 60):02d}"
+    total = int(max(0.0, float(seconds)))
+    hours, remainder = divmod(total, 3600)
+    minutes, secs = divmod(remainder, 60)
+    if hours:
+        return f"{hours:d}:{minutes:02d}:{secs:02d}"
+    return f"{minutes:02d}:{secs:02d}"
 
 
 def fmt_seconds(seconds: float) -> str:

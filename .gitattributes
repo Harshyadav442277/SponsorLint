@@ -1,0 +1,37 @@
+# Line endings are a per-machine setting today: this repository is written on
+# Windows with core.autocrlf=true and verified on ubuntu-latest, so what lands
+# in a commit depends on whoever made it. Codify it instead.
+#
+# The index already holds LF throughout, so this records the existing state
+# rather than renormalizing anything.
+
+* text=auto
+
+*.py     text diff=python
+*.md     text
+*.txt    text
+*.json   text
+*.yml    text
+*.yaml   text
+*.ini    text
+*.cfg    text
+*.html   text
+*.css    text
+*.js     text
+
+# LF regardless of platform: a CRLF shebang or a CRLF Dockerfile RUN line
+# fails inside the container, not on the machine that committed it.
+*.sh            text eol=lf
+Dockerfile      text eol=lf
+.gitattributes  text eol=lf
+.dockerignore   text eol=lf
+.gitignore      text eol=lf
+
+# Never touched, never diffed as text.
+*.pdf    binary
+*.mp4    binary
+*.mp3    binary
+*.wav    binary
+*.png    binary
+*.jpg    binary
+*.ico    binary

@@ -8,6 +8,11 @@ already contains digits, which is exactly what makes both Whisper styles work.
 `word2number` was tested and rejected: it raises on "save 73 percent", returns
 31 for "one minute and thirty seconds", folds "two zero" to 2, and returns only
 one number per string. This is a run-scanner instead, and adds no dependency.
+
+A run is bounded twice over. `_may_follow` stops it at a word that cannot
+continue the number, and a full stop stops it at the end of a sentence. Both
+guards exist for the same reason: a run that keeps going past its number
+reports a value nobody said.
 """
 
 from __future__ import annotations
@@ -147,6 +152,11 @@ def rewrite_number_words(text: str) -> str:
                 previous = _kind(core)
                 trailing = trail
                 j += 1
+                if "." in trail:
+                    # A full stop ends the sentence, and therefore the number.
+                    # Without this the run walks straight across the boundary
+                    # and "chapter two. three things" folds to "chapter 5".
+                    break
             elif core == "and" and run and j + 1 < n:
                 # Absorb an internal "and" only while a run is already open and
                 # a number-word that can legally continue it actually follows:

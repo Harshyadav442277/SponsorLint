@@ -118,3 +118,20 @@ def test_a_spoken_year_no_longer_matches_a_value_nobody_said():
     # so a brief requiring 118 passed against a transcript that never said it.
     assert not contains("118", "it launched in nineteen ninety nine")
     assert contains("99", "it launched in nineteen ninety nine")
+
+
+@pytest.mark.parametrize(
+    "text,expected",
+    [
+        ("save twenty. five reasons", "save 20. 5 reasons"),  # not "save 25 reasons"
+        ("chapter two. three things", "chapter 2. 3 things"),  # not "chapter 5 things"
+        ("it costs twenty. five people agree", "it costs 20. 5 people agree"),
+    ],
+)
+def test_a_number_run_stops_at_a_sentence_boundary(text, expected):
+    assert rewrite_number_words(text) == expected
+
+
+def test_a_full_stop_does_not_break_a_number_that_ends_on_it():
+    assert rewrite_number_words("save seventy-three.") == "save 73."
+    assert rewrite_number_words("one hundred and twenty.") == "120."

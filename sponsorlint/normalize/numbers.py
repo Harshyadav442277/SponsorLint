@@ -18,6 +18,7 @@ reports a value nobody said.
 from __future__ import annotations
 
 import re
+from decimal import Decimal
 
 UNITS: dict[str, int] = {
     "zero": 0, "one": 1, "two": 2, "three": 3, "four": 4, "five": 5,
@@ -121,6 +122,32 @@ def _fold(run: list[str]) -> int:
     return total + current
 
 
+#: Spoken after a whole number, "point" introduces per-digit decimals:
+#: "nine point nine nine" is 9.99, never nine plus a second number 99. The
+#: digits are read one at a time, which is why this cannot reuse `_fold`.
+_POINT = "point"
+
+
+def _decimal_digits(tokens: list[str], start: int, n: int) -> tuple[list[str], int, str]:
+    """Consume the per-digit run following "point"."""
+    digits: list[str] = []
+    trail = ""
+    k = start
+    while k < n:
+        core, tok_trail = _split_token(tokens[k])
+        if core in UNITS and UNITS[core] < 10:
+            digits.append(str(UNITS[core]))
+        elif len(core) == 1 and core.isdigit():
+            digits.append(core)
+        else:
+            break
+        trail = tok_trail
+        k += 1
+        if "." in tok_trail:
+            break
+    return digits, k, trail
+
+
 def rewrite_number_words(text: str) -> str:
     """Rewrite maximal runs of number-words to digit strings, in place.
 
@@ -175,7 +202,37 @@ def rewrite_number_words(text: str) -> str:
             i += 1
             continue
 
-        out.append(f"{_fold(run)}{trailing}")
+        whole = _fold(run)
+
+        # "nine point nine nine" -> 9.99, "one point five million" -> 1500000.
+        # Only ever after a whole number that did not already end on a full
+        # stop, so the "point" of ordinary prose is left alone.
+        if "." not in trailing and j < n and _split_token(tokens[j])[0] == _POINT:
+            digits, k, dec_trail = _decimal_digits(tokens, j + 1, n)
+            if digits:
+                fraction = "".join(digits)
+                scale = 0
+                if "." not in dec_trail and k < n:
+                    core_scale, scale_trail = _split_token(tokens[k])
+                    if core_scale in SCALES and core_scale != "hundred":
+                        scale = SCALES[core_scale]
+                        dec_trail = scale_trail
+                        k += 1
+                if scale:
+                    # `normalize` sheds the scale Decimal keeps after the
+                    # multiply, so "one point five million" is 1500000 rather
+                    # than 1500000.0 — which would not match a brief's 1500000.
+                    scaled = (Decimal(f"{whole}.{fraction}") * scale).normalize()
+                    value = format(scaled, "f")
+                else:
+                    # Kept literal so "nine point nine zero" stays 9.90 and can
+                    # still match a brief that wrote the price that way.
+                    value = f"{whole}.{fraction}"
+                out.append(f"{value}{dec_trail}")
+                i = k
+                continue
+
+        out.append(f"{whole}{trailing}")
         i = j
 
     return " ".join(out)

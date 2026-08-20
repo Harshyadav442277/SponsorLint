@@ -135,3 +135,35 @@ def test_a_number_run_stops_at_a_sentence_boundary(text, expected):
 def test_a_full_stop_does_not_break_a_number_that_ends_on_it():
     assert rewrite_number_words("save seventy-three.") == "save 73."
     assert rewrite_number_words("one hundred and twenty.") == "120."
+
+
+@pytest.mark.parametrize(
+    "text,expected",
+    [
+        ("nine point nine nine", "9.99"),  # a spoken price
+        ("one point five", "1.5"),
+        ("three point one four one five nine", "3.14159"),
+        ("nine point nine zero", "9.90"),  # trailing zero kept, as the brief wrote it
+        ("one point five million", "1500000"),  # not 1500000.0
+        ("one point two billion", "1200000000"),
+    ],
+)
+def test_spoken_decimals_resolve_to_a_digit_form(text, expected):
+    assert rewrite_number_words(text) == expected
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "the point is clear",
+        "at this point five people left",  # "point" not preceded by a number
+        "one point",  # nothing to the right of the point
+    ],
+)
+def test_the_ordinary_word_point_is_left_alone(text):
+    assert "point" in rewrite_number_words(text)
+
+
+def test_a_spoken_price_matches_the_brief_that_wrote_it_in_digits():
+    assert contains("$9.99", "it is only nine point nine nine dollars a month")
+    assert not contains("$9.99", "it is only nine point four nine dollars a month")

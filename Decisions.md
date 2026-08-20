@@ -307,6 +307,45 @@ deterministic verifier remain unchanged.
 
 ---
 
+## D24 · Three normalization corrections, and the guess the normalizer will not make
+
+Aug 20, 2026. Three defects in `normalize/`, all of the same family: the stage reported a value the
+transcript did not contain.
+
+**Decided — a number-word run is bounded twice, not maximal.**
+
+A run was every adjacent number-word, summed. `"nineteen ninety nine"` became `118`,
+`"twenty twenty four"` became `44`, `"three thirty"` became `33`. Separately, a run walked across a
+full stop, so `"chapter two. three things"` folded to `"chapter 5 things"`. A word that cannot
+continue the current number now closes it, and so does a sentence boundary.
+
+**The alternative we rejected — inferring the number a human would hear.** `"nineteen ninety nine"`
+is a year or a price, and 1999 or 19.99 is very often what was meant. Producing `19 99` looks like a
+half-measure next to that.
+
+**Why:** because the two failures are not the same size. Splitting a run reports two numbers that
+were both genuinely spoken, and a brief requiring neither simply does not match. Inferring 1999
+invents a four-digit value from three words on a convention the speaker never stated — and if that
+inference is wrong, EXACT_VALUE returns PASS against a number nobody said. That is a False PASS, and
+§7 is explicit that the two error types are not symmetric. **The normalizer reports; the compiler
+is the only component allowed to interpret**, and only once, at approval time, in front of a human.
+
+**Decided — `point` opens a per-digit run.** `"nine point nine nine"` is 9.99. Folding the tail
+arithmetically would give 9 and 18, which is the same fabrication in a different costume. Trailing
+zeros are kept literally so `9.90` still matches a brief that wrote the price that way.
+
+**Decided — the identifier gate admits separators.** `SAVE-20` failed `looks_like_code`, and a value
+that gate rejects is handed to the prose path and fuzzy-matched. Fuzzy-matching a tracked code is
+what §5.2 exists to forbid; the measured margin between a campaign's code and somebody else's is a
+few points. `spoken_pattern` already stripped separators, so only the gate was shut.
+
+**What would change our minds on the first one:** a labeled corpus of real sponsor reads showing
+that spoken years and prices appear in briefs often enough that splitting them costs more matches
+than inference would cost in False PASSes. That is a measurement, not an argument — and it would go
+in the eval fixtures before it went in the normalizer.
+
+---
+
 ## Open questions
 
 | Question | Owner | Resolve by |
